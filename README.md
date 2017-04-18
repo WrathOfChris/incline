@@ -40,3 +40,22 @@ try:
 except incline.InclineNotFound:
     print 'things not found'
 ```
+
+## routing
+
+Example routers simply postfix of `1` or `2` to the end of the datastore name
+
+Available example routers are:
+- InclineRouterOne - read & write from same datastore
+- InclineRouterTwo - read & write from two datastores
+- InclineRouterRead1 - write to two datastores, read from 1
+- InclineRouterRead2 - write to two datastores, read from 2
+
+```python
+ids1 = incline.InclineDatastoreDdb(name='your-datastore-name1')
+ids1.setup()
+ids2 = incline.InclineDatastoreDdb(name='your-datastore-name2')
+ids2.setup()
+
+ramp.rtr = InclineRouterTwo(name='your-datastore-name', region='us-east-1')
+```
