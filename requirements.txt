@@ -1,1 +1,12 @@
-boto3>=1.4.1,<1.5.0
+boto3>=1.26.115,<2
+opentelemetry-api>=1.17.0,<2
+opentelemetry-sdk>=1.17.0,<2
+opentelemetry-instrumentation-aws-lambda==0.38b0
+opentelemetry-instrumentation-dbapi==0.38b0
+opentelemetry-instrumentation-logging==0.38b0
+opentelemetry-instrumentation-sqlite3==0.38b0
+opentelemetry-instrumentation-urllib==0.38b0
+opentelemetry-instrumentation-wsgi==0.38b0
+opentelemetry-instrumentation-boto3sqs==0.38b0
+opentelemetry-instrumentation-botocore==0.38b0
+opentelemetry-instrumentation-urllib3==0.38b0

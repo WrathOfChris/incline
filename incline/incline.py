@@ -1,11 +1,7 @@
-from error import (
-    InclineError,
-    InclineInterface,
-    InclineNotFound,
-    InclineDataError
-)
-from datastore import InclineDatastore
-from datastoreDdb import InclineDatastoreDdb
-from client import InclineClient
-from router import InclineRouter, InclineRouterOne, InclineRouterTwo
-from router import InclineRouterRead1, InclineRouterRead2
+from incline.error import (InclineError, InclineInterface, InclineNotFound,
+                           InclineDataError)
+from incline.datastore import InclineDatastore
+from incline.datastoreDynamo import InclineDatastoreDynamo
+from incline.client import InclineClient
+from incline.router import (InclineRouter, InclineRouterOne, InclineRouterTwo,
+                            InclineRouterRead1, InclineRouterRead2)

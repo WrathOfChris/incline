@@ -1,9 +1,9 @@
-from error import InclineError, InclineInterface, InclineNotFound
+from incline.error import InclineError, InclineInterface, InclineNotFound
 
 
 class InclineRouter(object):
 
-    def __init__(self, name='incline', region='us-east-1'):
+    def __init__(self, name='incline', region='us-west-2'):
         self.init(name=name, region=region)
 
     def init(self, name, region):
@@ -43,47 +43,47 @@ class InclineRouter(object):
 
 class InclineRouterOne(InclineRouter):
 
-    def __init__(self, name='incline', region='us-east-1'):
+    def __init__(self, name='incline', region='us-west-2'):
         self.init(name=name, region=region)
 
     def default(self):
         self.route_read = [
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name)
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name)
         ]
         self.route_write = [
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name)
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name)
         ]
         self.route_search = [
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name)
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name)
         ]
 
 
 class InclineRouterTwo(InclineRouter):
 
-    def __init__(self, name='incline', region='us-east-1'):
+    def __init__(self, name='incline', region='us-west-2'):
         self.init(name=name, region=region)
 
     def default(self):
         self.route_read = [
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '1'),
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '2')
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '1'),
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '2')
         ]
         self.route_write = [
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '1'),
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '2')
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '1'),
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '2')
         ]
         self.route_search = [
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '1'),
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '2')
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '1'),
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '2')
         ]
 
 
@@ -94,26 +94,26 @@ class InclineRouterRead1(InclineRouter):
     Read 1
     """
 
-    def __init__(self, name='incline', region='us-east-1'):
+    def __init__(self, name='incline', region='us-west-2'):
         self.init(name=name, region=region)
 
     def default(self):
         # XXX FOR TESTING XXX
         self.route_read = [
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '1'),
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '1'),
         ]
         self.route_write = [
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '1'),
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '2')
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '1'),
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '2')
         ]
         self.route_search = [
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '1'),
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '2')
+                'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '1'),
+                'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '2')
         ]
 
 
@@ -124,24 +124,24 @@ class InclineRouterRead2(InclineRouter):
     Read 2
     """
 
-    def __init__(self, name='incline', region='us-east-1'):
+    def __init__(self, name='incline', region='us-west-2'):
         self.init(name=name, region=region)
 
     def default(self):
         # XXX FOR TESTING XXX
         self.route_read = [
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '2')
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '2')
         ]
         self.route_write = [
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '1'),
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '2')
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '1'),
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '2')
         ]
         self.route_search = [
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '1'),
-            'ddb{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                self.delimiter, self.name + '2')
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '1'),
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                     self.delimiter, self.name + '2')
         ]
