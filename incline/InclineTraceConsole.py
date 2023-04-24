@@ -25,8 +25,8 @@ class InclineTraceConsole(InclineTrace):
 
         # MetricsProvider
         self.metric_reader = PeriodicExportingMetricReader(
-                ConsoleMetricExporter())
+            ConsoleMetricExporter())
         self.meter_provider = MeterProvider(
-                metric_readers=[self.metric_reader])
+            metric_readers=[self.metric_reader])
 
         self.init(name, tracer, meter)

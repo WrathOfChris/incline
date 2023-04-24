@@ -67,8 +67,8 @@ class InclineClient(object):
         for v in vals.values():
             for m in v['met']:
                 # 2.1 - Verify each val metadata older than other vals in set
-                if m['kid'] in vals and self.pxn.cmppxn(vals[m['kid']]['pxn'],
-                                                        m['pxn']) < 0:
+                if m['kid'] in vals and self.pxn.cmppxn(
+                        vals[m['kid']]['pxn'], m['pxn']) < 0:
                     self.log.warn('get readatomic %s %s %s', m['kid'],
                                   m['loc'], m['pxn'])
                     # 2.2 - GET from LOG any missing newer keys
@@ -94,7 +94,7 @@ class InclineClient(object):
 
     def create(self, kid, dat):
         self.log.info('create %s', kid)
-        pxn = self.putatomic([{'kid': kid, 'dat': dat}], create=True)
+        pxn = self.putatomic([{'kid': kid, 'dat': dat}], mode='create')
         return pxn
 
     def creates(self, dat):
@@ -102,7 +102,16 @@ class InclineClient(object):
         [{'kid': kid, 'dat': dat}]
         """
         self.log.info('creates %s', len(dat))
-        pxn = self.putatomic(dat, create=True)
+        pxn = self.putatomic(dat, mode='create')
+        return pxn
+
+    def delete(self, kid):
+        """
+        Delete creates with empty data, which causes a tombstone record to be
+        created.  Reads filter tombstones earlier than now.
+        """
+        self.log.info('delete %s', kid)
+        pxn = self.putatomic([{'kid': kid, 'dat': None}], mode='delete')
         return pxn
 
     def getkey(self, key):
@@ -129,7 +138,7 @@ class InclineClient(object):
             raise InclineNotFound('log not found in any datastore')
         return self.verify(vals)
 
-    def putatomic(self, dat, create=False):
+    def putatomic(self, dat, mode=None):
         # TODO: check number ranges and data types (ex: dynamo decimal)
         datastores = list()
         pxn = self.pxn.pxn()
@@ -154,7 +163,7 @@ class InclineClient(object):
             con = self.ds_open(ds)
             for d in dat:
                 if ds in d['datastores']:
-                    con.commit(d['kid'], pxn, create=create)
+                    con.commit(d['kid'], pxn, mode=mode)
 
         return pxn
 
@@ -171,6 +180,10 @@ class InclineClient(object):
                 continue
 
             met.append(con.meta(kid, pxn))
+
+        # no data provided, delete/tombstone
+        if not dat:
+            return met
 
         # Add metadata for additional keys
         for d in dat:
@@ -234,10 +247,9 @@ class InclineClient(object):
         if loc['dbtype'] == 'dynamo':
             con = InclineDatastoreDynamo(name=loc['name'],
                                          region=loc['region'])
-            # XXX TODO this no longer sets values
-            #con.rid(rid=self.__rid)
-            #con.uid(uid=self.__uid)
-            #con.cid(cid=self.pxn.cid())
+            con.rid(rid=self.__rid)
+            con.uid(uid=self.__uid)
+            con.pxn.cid(cid=self.pxn.cid())
         else:
             raise InclineInterfaceError('unknown datastore in location string')
 

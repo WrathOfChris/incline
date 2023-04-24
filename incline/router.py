@@ -49,15 +49,15 @@ class InclineRouterOne(InclineRouter):
     def default(self):
         self.route_read = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name)
+                                        self.delimiter, self.name)
         ]
         self.route_write = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name)
+                                        self.delimiter, self.name)
         ]
         self.route_search = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name)
+                                        self.delimiter, self.name)
         ]
 
 
@@ -69,21 +69,21 @@ class InclineRouterTwo(InclineRouter):
     def default(self):
         self.route_read = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '1'),
+                                        self.delimiter, self.name + '1'),
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '2')
+                                        self.delimiter, self.name + '2')
         ]
         self.route_write = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '1'),
+                                        self.delimiter, self.name + '1'),
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '2')
+                                        self.delimiter, self.name + '2')
         ]
         self.route_search = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '1'),
+                                        self.delimiter, self.name + '1'),
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '2')
+                                        self.delimiter, self.name + '2')
         ]
 
 
@@ -101,19 +101,19 @@ class InclineRouterRead1(InclineRouter):
         # XXX FOR TESTING XXX
         self.route_read = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '1'),
+                                        self.delimiter, self.name + '1'),
         ]
         self.route_write = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '1'),
+                                        self.delimiter, self.name + '1'),
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '2')
+                                        self.delimiter, self.name + '2')
         ]
         self.route_search = [
-                'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '1'),
-                'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '2')
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                        self.delimiter, self.name + '1'),
+            'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
+                                        self.delimiter, self.name + '2')
         ]
 
 
@@ -131,17 +131,17 @@ class InclineRouterRead2(InclineRouter):
         # XXX FOR TESTING XXX
         self.route_read = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '2')
+                                        self.delimiter, self.name + '2')
         ]
         self.route_write = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '1'),
+                                        self.delimiter, self.name + '1'),
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '2')
+                                        self.delimiter, self.name + '2')
         ]
         self.route_search = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '1'),
+                                        self.delimiter, self.name + '1'),
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
-                                     self.delimiter, self.name + '2')
+                                        self.delimiter, self.name + '2')
         ]

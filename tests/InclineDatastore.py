@@ -11,14 +11,21 @@ from incline.error import InclineNotFound
 log = logging.getLogger('incline')
 log.setLevel(logging.INFO)
 
-TEST_TABLE="test-incline-none"
-TEST_REGION="us-west-2"
-TEST_PREFIX="test-datastore"
+TEST_TABLE = "test-incline-none"
+TEST_REGION = "us-west-2"
+TEST_PREFIX = "test-datastore"
+
 
 class InclineDatastoreTest(incline.InclineDatastore.InclineDatastore):
     """
     Override datastore methods with test fixtures
     """
+
+    def __init__(self, *args, **kwargs):
+        # permit individual tests to be run by setting up store_log/store_txn
+        super().__init__(*args, **kwargs)
+        self.ds_setup()
+
     def ds_get_log(self, kid, pxn=None):
         logs = self.store_log.get(kid)
         if not logs:
@@ -47,7 +54,7 @@ class InclineDatastoreTest(incline.InclineDatastore.InclineDatastore):
         self.store_log[kid][val.get('pxn')] = val
         return [val]
 
-    def ds_commit(self, kid, log, create=False):
+    def ds_commit(self, kid, log, mode=None):
         """ fixture with no origin tsv (new item) """
         if kid not in self.store_txn:
             self.store_txn[kid] = {}
@@ -84,16 +91,16 @@ class InclineDatastoreTest(incline.InclineDatastore.InclineDatastore):
         pxn = "00000000.00000000000"
         self.store_log = {}
         log = {
-                'kid': kid,
-                'pxn': pxn,
-                'tsv': self.pxn.now(),
-                'cid': self.pxn.cid(),
-                'uid': self.uid(),
-                'rid': self.rid(),
-                'ver': self.version,
-                'met': [],  # TODO: self.canon_metadata()?
-                'dat': "test fixture",
-                }
+            'kid': kid,
+            'pxn': pxn,
+            'tsv': self.pxn.now(),
+            'cid': self.pxn.cid(),
+            'uid': self.uid(),
+            'rid': self.rid(),
+            'ver': self.version,
+            'met': [],    # TODO: self.canon_metadata()?
+            'dat': "test fixture",
+        }
         self.store_log[kid] = {}
         self.store_log[kid][pxn] = log
 
@@ -110,19 +117,18 @@ class InclineDatastoreTest(incline.InclineDatastore.InclineDatastore):
             'rid': self.rid(),
             'org': 0,
             'ver': self.version,
-            'met': [],  # TODO: self.canon_metadata()?
+            'met': [],    # TODO: self.canon_metadata()?
             'dat': "test fixture",
-            }
+        }
         self.store_txn[kid] = {}
         self.store_txn[kid][tsv] = txn
 
 
 ramp = incline.InclineClient.InclineClient(
-        name=TEST_TABLE,
-        region=TEST_REGION,
-        rid='123e4567-e89b-12d3-a456-426655440000',
-        uid='00000000-0000-0000-0000-000000000000'
-        )
+    name=TEST_TABLE,
+    region=TEST_REGION,
+    rid='123e4567-e89b-12d3-a456-426655440000',
+    uid='00000000-0000-0000-0000-000000000000')
 
 
 class TestDatastore(unittest.TestCase):
@@ -130,10 +136,7 @@ class TestDatastore(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.ds = InclineDatastoreTest(
-                name=TEST_TABLE,
-                region=TEST_REGION
-                )
+        cls.ds = InclineDatastoreTest(name=TEST_TABLE, region=TEST_REGION)
         # opentelemetry traces to console
         if __name__ == "__main__":
             cls.ds.trace = InclineTraceConsole()
@@ -195,10 +198,7 @@ class TestDatastore(unittest.TestCase):
         self.assertIsInstance(v[1], decimal.Decimal)
 
     def test_numbers_to_remote_dict(self):
-        v = self.ds.numbers_to_remote({
-            'i': int(1),
-            'f': float(1.0)
-            })
+        v = self.ds.numbers_to_remote({'i': int(1), 'f': float(1.0)})
         self.assertIsInstance(v['i'], int)
         self.assertIsInstance(v['f'], decimal.Decimal)
 
@@ -209,8 +209,8 @@ class TestDatastore(unittest.TestCase):
                               float)
 
     def test_numbers_to_local_list(self):
-        v = self.ds.numbers_to_local([decimal.Decimal(1),
-                                      decimal.Decimal("1.0")])
+        v = self.ds.numbers_to_local(
+            [decimal.Decimal(1), decimal.Decimal("1.0")])
         self.assertIsInstance(v[0], int)
         self.assertIsInstance(v[1], float)
 
@@ -218,7 +218,7 @@ class TestDatastore(unittest.TestCase):
         v = self.ds.numbers_to_local({
             'i': decimal.Decimal(1),
             'f': decimal.Decimal("1.0")
-            })
+        })
         self.assertIsInstance(v['i'], int)
         self.assertIsInstance(v['f'], float)
 
@@ -237,6 +237,13 @@ class TestDatastore(unittest.TestCase):
         self.assertEqual(p['uid'], self.ds.uid())
         self.assertIsInstance(p['tsv'], decimal.Decimal)
         self.assertGreater(self.ds.pxn.now(), p['tsv'])
+
+    def fixture(self, kid, dat=None):
+        pxn = ramp.pxn.pxn()
+        met = ramp.genmet([], None, kid, pxn, dat)
+        prepare = self.ds.prepare(kid, pxn, met, dat)
+        commit = self.ds.commit(kid, pxn)
+        return commit
 
     def test_prepare_commit_1(self):
         kid = f"{TEST_PREFIX}-prepare-commit"
@@ -289,6 +296,13 @@ class TestDatastore(unittest.TestCase):
         kid = f"{TEST_PREFIX}-never-store-this"
         resp = self.ds.ds_get_txn(kid, tsv=42)
         self.assertEqual(resp, [])
+
+    def test_delete_tombstone(self):
+        kid = f"{TEST_PREFIX}-delete-tombstone"
+        fix = self.ds.only(self.fixture(kid, None))
+        resp = self.ds.only(self.ds.ds_get_txn(kid, tsv=fix['tsv']))
+        self.assertGreater(resp['tmb'], 0)
+        self.assertEqual(resp['dat'], None)
 
     def test_prepare_commit_create(self):
         pass

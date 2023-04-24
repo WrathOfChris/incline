@@ -3,9 +3,10 @@ import incline
 from incline.InclineTrace import InclineTrace
 from incline.InclineTraceConsole import InclineTraceConsole
 
-TEST_PREFIX="test-InclineTrace"
+TEST_PREFIX = "test-InclineTrace"
 
 trace = InclineTrace()
+
 
 class TestInclineTrace(unittest.TestCase):
     maxDiff = None
@@ -21,6 +22,7 @@ class TestInclineTrace(unittest.TestCase):
         with trace.tracer.start_as_current_span(
                 f"{TEST_PREFIX}-start_as_current_span") as span:
             span.set_attribute("test.test_start_as_current_span", True)
+
 
 if __name__ == "__main__":
     # opentelemetry traces to console

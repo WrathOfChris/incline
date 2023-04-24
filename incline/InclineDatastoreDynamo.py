@@ -4,6 +4,7 @@ from incline.error import (InclineError, InclineExists, InclineDataError,
 import boto3
 import decimal
 import copy
+import botocore.config
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key, Attr
 
@@ -13,7 +14,6 @@ import botocore
 
 # Instrument Botocore
 BotocoreInstrumentor().instrument()
-
 """
 LOG FORMAT
 {
@@ -68,8 +68,10 @@ class InclineDatastoreDynamo(InclineDatastore):
             span.set_attribute("dynamo.table", self.txnname)
             self.txntbl = self.dynamores.Table(self.txnname)
         with self.trace.span("aws.dynamodb.client") as span:
-            self.dynamoclient = boto3.client('dynamodb',
-                                             region_name=self.region)
+            self.dynamoclient = boto3.client(
+                'dynamodb',
+                region_name=self.region,
+                config=botocore.config.Config(retries={'mode': 'adaptive'}))
 
     def ds_get_log(self, kid, pxn=None):
         request_args = locals()
@@ -89,16 +91,18 @@ class InclineDatastoreDynamo(InclineDatastore):
                 kwargs['KeyConditionExpression'] = Key('kid').eq(kid)
                 kwargs['ScanIndexForward'] = False
 
-            with self.trace.span("aws.dynamodb.query") as span:
+            with self.trace.span("aws.dynamodb.query") as span_query:
                 try:
                     resp = self.logtbl.query(**kwargs)
                 except ClientError as e:
                     raise InclineDataError(e.response['Error']['Message'])
-                self.map_aws_response_span(resp, span)
+                self.map_aws_response_span(resp, span_query)
 
             # XXX validate resp?  Count.  Items.
 
-        return self.map_log_response(resp)
+            local_resp = self.map_log_response(resp)
+            self.map_response_span(local_resp, span)
+            return local_resp
 
     def ds_get_txn(self, kid, tsv=None, limit=1):
         """
@@ -130,16 +134,18 @@ class InclineDatastoreDynamo(InclineDatastore):
                 if limit:
                     kwargs['Limit'] = limit
 
-            with self.trace.span("aws.dynamodb.query") as span:
+            with self.trace.span("aws.dynamodb.query") as span_query:
                 try:
                     resp = self.txntbl.query(**kwargs)
                 except ClientError as e:
                     raise InclineDataError(e.response['Error']['Message'])
-                self.map_aws_response_span(resp, span)
+                self.map_aws_response_span(resp, span_query)
 
             # XXX validate resp?  Count.  Items.
 
-        return self.map_txn_response(resp)
+            local_resp = self.map_txn_response(resp)
+            self.map_response_span(local_resp, span)
+            return local_resp
 
     def ds_prepare(self, kid, val):
         request_args = locals()
@@ -156,17 +162,18 @@ class InclineDatastoreDynamo(InclineDatastore):
             # DynamoDB uses Decimal, does not support float
             remote_val = self.numbers_to_remote(copy.deepcopy(val))
 
-            with self.trace.span("aws.dynamodb.put_item") as span:
-                resp = self.logtbl.put_item(Item=remote_val)
+            with self.trace.span("aws.dynamodb.put_item") as span_put:
+                resp = self.logtbl.put_item(Item=remote_val,
+                                            ReturnValues='ALL_OLD')
 
                 # Attributes - returned when ALL_OLD set
                 # ConsumedCapacity
                 # ItemCollectionMetrics - SizeEstimateRange returned when asked
 
-                self.map_aws_response_span(resp, span)
-        return [val]
+                self.map_aws_response_span(resp, span_put)
+                return [val]
 
-    def ds_commit(self, kid, log, create=False):
+    def ds_commit(self, kid, log, mode=None):
         request_args = locals()
         with self.trace.span("incline.datastore.ds_commit") as span:
             self.map_request_span(request_args, span)
@@ -176,31 +183,48 @@ class InclineDatastoreDynamo(InclineDatastore):
             org = self.only(self.ds_get_txn(kid))
             if org and 'tsv' in org:
                 orgtsv = org['tsv']
+            if org:
+                self.map_txn_span(org, span, prefix="org")
+
+            kwargs = {}
 
             # To prevent PutItem from overwriting an existing item, use a
-            # conditional expression that specifies that the partition key of the
-            # item does not exist. Since every item in the table must have a
-            # partition key, this will prevent any existing item from being
+            # conditional expression that specifies that the partition key of
+            # the item does not exist. Since every item in the table must have
+            # a partition key, this will prevent any existing item from being
             # overwritten
-            kwargs = {}
-            if create:
-                kwargs['ConditionExpression'] = 'attribute_not_exists(kid)'
-                # Force unique range key by setting timestamp to 0
+            if mode == 'create':
+                # Tombstones prevent ConditionExpression on the partition key
+                # from working as a condition.
+                #
+                # RACE: tombstone delete multiple creates.  Detected by post-
+                #       delete records with same tombstone origin
+                if not self.is_txn_deleted(org, log.get('tsv')):
+                    kwargs['ConditionExpression'] = Attr('kid').not_exists()
+
+                # Force unique range key for the transaction by zeroing tsv
+                # This means re-committing an old transaction refreshes it
                 log['tsv'] = 0
 
+            if mode == 'delete':
+                log['dat'] = None
+
             val = self.gentxn(log, tsv=orgtsv)
-            with self.trace.span("aws.dynamodb.put_item") as span:
+            self.map_txn_span(val, span, prefix="txn")
+            with self.trace.span("aws.dynamodb.put_item") as span_put:
                 try:
-                    resp = self.txntbl.put_item(Item=val, **kwargs)
+                    resp = self.txntbl.put_item(Item=val,
+                                                ReturnValues='ALL_OLD',
+                                                **kwargs)
                 except ClientError as e:
                     if e.response['Error'][
                             'Code'] == 'ConditionalCheckFailedException':
                         raise InclineExists('key already exists')
                     else:
                         raise (e)
-                self.map_aws_response_span(resp, span)
-
-        return [val]
+                self.map_aws_response_span(resp, span_put)
+                # TODO: ALL_OLD
+                return [val]
 
     def ds_scan_log(self, kid=None, tsv=None, limit=None):
         """
@@ -230,17 +254,16 @@ class InclineDatastoreDynamo(InclineDatastore):
             else:
                 self.log.info(f"scanlog (all)")
 
-            with self.trace.span("aws.dynamodb.scan") as span:
+            with self.trace.span("aws.dynamodb.scan") as span_scan:
                 paginator = self.dynamoclient.get_paginator('scan')
-                resp = paginator.paginate(
-                        TableName=self.logname,
-                        Select='SPECIFIC_ATTRIBUTES',
-                        ProjectionExpression='kid, pxn, ver',
-                        ConsistentRead=False,
-                        **kwargs)
+                resp = paginator.paginate(TableName=self.logname,
+                                          Select='SPECIFIC_ATTRIBUTES',
+                                          ProjectionExpression='kid, pxn, ver',
+                                          ConsistentRead=False,
+                                          **kwargs)
                 try:
                     for page in resp:
-                        self.map_aws_response_span(page, span)
+                        self.map_aws_response_span(page, span_scan)
 
                         # empty page, likely FilterExpression filtered all
                         if page.get('Count') == 0 or not len(page['Items']):
@@ -248,13 +271,15 @@ class InclineDatastoreDynamo(InclineDatastore):
 
                         items = self.map_scan_log_response(page)
                         for item in items:
-                            logs.append({'kid': item['kid'],
-                                         'pxn': item['pxn']})
+                            logs.append({
+                                'kid': item['kid'],
+                                'pxn': item['pxn']
+                            })
                 except ClientError as e:
                     raise InclineDataError(e.response['Error']['Message'])
 
                 # XXX validate resp?  Count.  Items.
-        return logs
+                return logs
 
     def ds_scan_txn(self, kid=None, tsv=None, limit=None):
         """
@@ -284,14 +309,13 @@ class InclineDatastoreDynamo(InclineDatastore):
             else:
                 self.log.info(f"scantxn (all)")
 
-            with self.trace.span("aws.dynamodb.scan") as span:
+            with self.trace.span("aws.dynamodb.scan") as span_scan:
                 paginator = self.dynamoclient.get_paginator('scan')
-                resp = paginator.paginate(
-                        TableName=self.txnname,
-                        Select='SPECIFIC_ATTRIBUTES',
-                        ProjectionExpression='kid, tsv, ver',
-                        ConsistentRead=False,
-                        **kwargs)
+                resp = paginator.paginate(TableName=self.txnname,
+                                          Select='SPECIFIC_ATTRIBUTES',
+                                          ProjectionExpression='kid, tsv, ver',
+                                          ConsistentRead=False,
+                                          **kwargs)
                 try:
                     for page in resp:
                         self.map_aws_response_span(resp, span)
@@ -302,15 +326,17 @@ class InclineDatastoreDynamo(InclineDatastore):
 
                         items = self.map_scan_txn_response(page)
                         for item in items:
-                            txns.append({'kid': item['kid'],
-                                         'tsv': item['tsv']})
-                        if 'Items' not  in page:
+                            txns.append({
+                                'kid': item['kid'],
+                                'tsv': item['tsv']
+                            })
+                        if 'Items' not in page:
                             raise InclineError(f"bad api response {page}")
                 except ClientError as e:
                     raise InclineDataError(e.response['Error']['Message'])
 
                 # XXX validate resp?  Count.  Items.
-        return txns
+                return txns
 
     def ds_delete_log(self, kid, pxn):
         request_args = locals()
@@ -320,17 +346,19 @@ class InclineDatastoreDynamo(InclineDatastore):
         with self.trace.span("incline.datastore.ds_delete_log") as span:
             self.map_request_span(request_args, span)
 
-            with self.trace.span("aws.dynamo.delete_item"):
+            with self.trace.span("aws.dynamo.delete_item") as span_delete:
                 try:
-                    resp = self.logtbl.delete_item(
-                            Key={'kid': kid, 'pxn': pxn},
-                            ReturnValues='ALL_OLD')
+                    resp = self.logtbl.delete_item(Key={
+                        'kid': kid,
+                        'pxn': pxn
+                    },
+                                                   ReturnValues='ALL_OLD')
                 except ClientError as e:
                     raise (e)
 
                 if ('Attributes' not in resp
-                    or resp['Attributes'].get('kid') != kid
-                    or resp['Attributes'].get('pxn') != pxn):
+                        or resp['Attributes'].get('kid') != kid
+                        or resp['Attributes'].get('pxn') != pxn):
                     raise InclineNotFound(f"cannot delete {kid} pxn {pxn}")
 
     def ds_delete_txn(self, kid, tsv):
@@ -343,47 +371,37 @@ class InclineDatastoreDynamo(InclineDatastore):
         with self.trace.span("incline.datastore.ds_delete_txn") as span:
             self.map_request_span(request_args, span)
 
-            with self.trace.span("aws.dynamo.delete_item"):
+            with self.trace.span("aws.dynamo.delete_item") as span_delete:
                 try:
-                    resp = self.txntbl.delete_item(
-                            Key={'kid': kid, 'tsv': tsv},
-                            ReturnValues='ALL_OLD')
+                    resp = self.txntbl.delete_item(Key={
+                        'kid': kid,
+                        'tsv': tsv
+                    },
+                                                   ReturnValues='ALL_OLD')
                 except ClientError as e:
                     raise (e)
 
                 if ('Attributes' not in resp
-                    or resp['Attributes'].get('kid') != kid
-                    or resp['Attributes'].get('tsv') != tsv):
+                        or resp['Attributes'].get('kid') != kid
+                        or resp['Attributes'].get('tsv') != tsv):
                     raise InclineNotFound(f"cannot delete {kid} tsv {tsv}")
 
     def map_log_response(self, resp):
+        """
+        Pass Dynamo Items to InclineDatastore.map_log_response
+        """
         if 'Items' not in resp:
             raise InclineDataError('map log invalid items')
-        results = list()
-        for r in resp['Items']:
-            if 'ver' not in r:
-                continue
-            if int(r['ver'] == 1):
-                r = self.map_log_response_v1(r)
-            results.append(r)
-        return results
+        return super().map_log_response(resp['Items'])
 
     def map_txn_response(self, resp):
         if 'Items' not in resp:
             raise InclineDataError('map txn invalid items')
-        results = list()
-        for r in resp['Items']:
-            if 'ver' not in r:
-                continue
-            if int(r['ver'] == 1):
-                r = self.map_txn_response_v1(r)
-            results.append(r)
-        return results
+        return super().map_txn_response(resp['Items'])
 
     def map_scan_log_response(self, resp):
         if 'Items' not in resp:
             raise InclineDataError('map scan invalid items')
-
         """
         Pagination comes from DynamoDB.Client which is a low-level client.
         Use the internal boto3 deserializer that Table() uses
@@ -403,7 +421,6 @@ class InclineDatastoreDynamo(InclineDatastore):
     def map_scan_txn_response(self, resp):
         if 'Items' not in resp:
             raise InclineDataError('map scan invalid items')
-
         """
         Pagination comes from DynamoDB.Client which is a low-level client.
         Use the internal boto3 deserializer that Table() uses
@@ -436,7 +453,6 @@ class InclineDatastoreDynamo(InclineDatastore):
                 span.set_attribute("response.status", meta['httpStatusCode'])
             if 'RequestId' in meta:
                 span.set_attribute("response.rid", meta['RequestId'])
-
 
     def ds_setup(self):
         self.ds_setup_log()

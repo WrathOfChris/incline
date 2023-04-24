@@ -10,19 +10,17 @@ import botocore
 log = logging.getLogger('incline')
 log.setLevel(logging.INFO)
 
-TEST_TABLE="test-incline-dynamo"
-TEST_REGION="us-west-2"
-TEST_PREFIX="test-datastoreDynamo"
+TEST_TABLE = "test-incline-dynamo"
+TEST_REGION = "us-west-2"
+TEST_PREFIX = "test-datastoreDynamo"
+
 
 class TestDatastoreDynamo(TestDatastore):
     maxDiff = None
 
     @classmethod
     def setUpClass(cls):
-        cls.ds = InclineDatastoreDynamo(
-                name=TEST_TABLE,
-                region=TEST_REGION
-                )
+        cls.ds = InclineDatastoreDynamo(name=TEST_TABLE, region=TEST_REGION)
         # opentelemetry traces to console
         if __name__ == "__main__":
             cls.ds.trace = InclineTraceConsole()
@@ -40,7 +38,7 @@ class TestDatastoreDynamo(TestDatastore):
 #    def ds_prepare(self, kid, val):
 #        pass
 #
-#    def ds_commit(self, kid, log, create=False):
+#    def ds_commit(self, kid, log, mode=None):
 #        pass
 #
 #    def test_map_log_response(self):
@@ -55,7 +53,7 @@ class TestDatastoreDynamo(TestDatastore):
 #    def test_map_txn_response_v1(self):
 #        pass
 #
-    ## TODO check config of dynamo table
+## TODO check config of dynamo table
 
     def test_002_setup(self):
         """ catch expected ResourceInUseException """
@@ -66,6 +64,7 @@ class TestDatastoreDynamo(TestDatastore):
             self.assertEqual(e.response['Error']['Code'],
                              'ResourceInUseException')
 
+
 #    def test_ds_setup(self):
 #        pass
 #
@@ -74,7 +73,6 @@ class TestDatastoreDynamo(TestDatastore):
 #
 #    def test_ds_setup_txn(self):
 #        pass
-
 
 if __name__ == "__main__":
     unittest.main()

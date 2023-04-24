@@ -6,6 +6,7 @@ import incline.InclinePrepare
 
 pxn = incline.InclinePrepare.InclinePrepare()
 
+
 class TestInclinePrepare(unittest.TestCase):
     maxDiff = None
 
@@ -16,8 +17,7 @@ class TestInclinePrepare(unittest.TestCase):
         pass
 
     def test_cid(self):
-        self.assertEqual(pxn.cid(),
-                         incline.base62.base_encode(uuid.getnode()))
+        self.assertEqual(pxn.cid(), incline.base62.base_encode(uuid.getnode()))
 
     def test_cnt(self):
         pass

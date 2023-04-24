@@ -59,7 +59,9 @@ class InclineDatastore(object):
         return False
 
     def get(self, kid, tsv=None, pxn=None):
-        with self.trace.tracer.start_as_current_span("incline.get") as span:
+        request_args = locals()
+        with self.trace.span("incline.get") as span:
+            self.map_request_span(request_args, span)
             if tsv:
                 self.log.info('get %s tsv %s', kid, tsv)
                 return self.ds_get_txn(kid, tsv)
@@ -68,7 +70,26 @@ class InclineDatastore(object):
                 return self.ds_get_log(kid, pxn)
 
             self.log.info('get %s', kid)
-            return self.ds_get_txn(kid)
+            return self.filter_deleted(self.ds_get_txn(kid), tsv=tsv)
+
+    def filter_deleted(self, txns, tsv=None):
+        """
+        Return a list with any deleted records removed
+        """
+        with self.trace.span("incline.filter_deleted") as span:
+            if not isinstance(txns, list):
+                txns = [txns]
+
+            if not tsv:
+                tsv = self.pxn.now()
+
+            results = list()
+            for t in txns:
+                if self.is_txn_deleted(t, tsv):
+                    continue
+                results.append(t)
+
+            return results
 
     def prepare_val(self, kid, pxn, met, dat):
         return {
@@ -84,18 +105,25 @@ class InclineDatastore(object):
         }
 
     def prepare(self, kid, pxn, met, dat):
-        self.log.info('prepare %s pxn %s', kid, pxn)
-        val = self.prepare_val(kid, pxn, met, dat)
-        return self.ds_prepare(kid, val)
+        request_args = locals()
+        with self.trace.span("incline.prepare") as span:
+            self.map_request_span(request_args, span)
+            self.log.info('prepare %s pxn %s', kid, pxn)
+            val = self.prepare_val(kid, pxn, met, dat)
+            return self.ds_prepare(kid, val)
 
-    def commit(self, kid, pxn, create=False):
-        # Read log entry
-        log = self.only(self.ds_get_log(kid, pxn))
-        self.log.info('commit %s pxn %s org %s', kid, pxn, log['tsv'])
-        return self.ds_commit(kid, log, create=create)
+    def commit(self, kid, pxn, mode=None):
+        request_args = locals()
+        with self.trace.span("incline.commit") as span:
+            self.map_request_span(request_args, span)
+            # Read log entry
+            log = self.only(self.ds_get_log(kid, pxn))
+            self.log.info('commit %s pxn %s org %s', kid, pxn, log['tsv'])
+            return self.ds_commit(kid, log, mode=mode)
 
     def setup(self):
-        return self.ds_setup()
+        with self.trace.span("incline.setup") as span:
+            return self.ds_setup()
 
     def genlog(self, kid, pxn, met, dat):
         log = {
@@ -113,9 +141,9 @@ class InclineDatastore(object):
 
     def gentxn(self, log, tsv=0):
         # Set tombstone when empty data
-        tmb = False
+        tmb = 0
         if log['dat'] is None:
-            tmb = True
+            tmb = self.pxn.decimal(log['tsv'])
 
         txn = {
             'kid': log['kid'],
@@ -298,7 +326,7 @@ class InclineDatastore(object):
                 elif k == 'tsv':
                     r[k] = self.pxn.decimal(resp[k])
                 elif k == 'tmb':
-                    r[k] = bool(resp[k])
+                    r[k] = self.pxn.decimal(resp[k])
                 else:
                     r[k] = resp[k]
         return r
@@ -321,7 +349,75 @@ class InclineDatastore(object):
             # cannot set span attribute to None
             if v == None:
                 continue
-            span.set_attribute(k,  v)
+            span.set_attribute(k, v)
+
+    def map_response_span(self, value, span):
+        """
+        map a dict of arguments into span attributes
+        filter out 'dat' to avoid tracing stored data
+        """
+        flat = flatten(value, prefix="response")
+        for k, v in flat.items():
+            if k == 'dat' or ".dat." in k or k.endswith(".dat"):
+                continue
+            # drop class self local
+            if k == 'self' or ".self." in k or k.endswith(".self"):
+                continue
+            # string instead of float losing precision for Decimal
+            if isinstance(v, decimal.Decimal):
+                v = str(v)
+            # cannot set span attribute to None
+            if v == None:
+                continue
+            span.set_attribute(k, v)
+
+    def map_txn_span(self, value, span, prefix="response"):
+        """
+        map a dict of arguments into span attributes
+        filter out 'dat' to avoid tracing stored data
+        """
+        flat = flatten(value, prefix=prefix)
+        for k, v in flat.items():
+            if k == 'dat' or ".dat." in k or k.endswith(".dat"):
+                continue
+            # string instead of float losing precision for Decimal
+            if isinstance(v, decimal.Decimal):
+                v = str(v)
+            # cannot set span attribute to None
+            if v == None:
+                continue
+            span.set_attribute(k, v)
+
+    def map_log_span(self, value, span, prefix="response"):
+        """
+        map a dict of arguments into span attributes
+        filter out 'dat' to avoid tracing stored data
+        """
+        flat = flatten(value, prefix=prefix)
+        for k, v in flat.items():
+            if k == 'dat' or ".dat." in k or k.endswith(".dat"):
+                continue
+            # string instead of float losing precision for Decimal
+            if isinstance(v, decimal.Decimal):
+                v = str(v)
+            # cannot set span attribute to None
+            if v == None:
+                continue
+            span.set_attribute(k, v)
+
+    def is_txn_deleted(self, txn, tsv=None):
+        """
+        Record is deleted when a tombstone exists in the past
+        """
+        # no record is considered deleted
+        if not txn:
+            return True
+
+        if not tsv:
+            tsv = self.pxn.now()
+
+        tmb = txn.get('tmb', 0)
+        return tmb != 0 and tmb < tsv
 
     """
     Methods to override
@@ -336,7 +432,7 @@ class InclineDatastore(object):
     def ds_prepare(self, kid, val):
         pass
 
-    def ds_commit(self, kid, log, create=False):
+    def ds_commit(self, kid, log, mode=None):
         pass
 
     def ds_scan_log(self, kid=None, pxn=None, limit=None):

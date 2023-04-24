@@ -6,7 +6,6 @@ import copy
 
 # global memory store
 DATASTORE_MEMORY = dict()
-
 """
 LOG FORMAT
 {
@@ -106,7 +105,9 @@ class InclineDatastoreMemory(InclineDatastore):
                 self.log.info('getlog %s pxn %s', kid, pxn)
                 # XXX max in prepare transaction id order (counter, client)
                 pxn = max((l.split('.')[1], l.split('.')[0]) for l in log)
-            return self.map_log_response(copy.deepcopy(log.get(pxn)))
+            local_resp = self.map_log_response(copy.deepcopy(log.get(pxn)))
+            self.map_response_span(local_resp, span)
+            return local_resp
 
     def ds_get_txn(self, kid, tsv=None, limit=1):
         request_args = locals()
@@ -126,7 +127,9 @@ class InclineDatastoreMemory(InclineDatastore):
                 if not txn:
                     raise ValueError(self.txndb)
                 tsv = max(txn)
-            return self.map_txn_response(copy.deepcopy(txn.get(tsv)))
+            local_resp = self.map_txn_response(copy.deepcopy(txn.get(tsv)))
+            self.map_response_span(local_resp, span)
+            return local_resp
 
     def ds_prepare(self, kid, val):
         request_args = locals()
@@ -137,7 +140,7 @@ class InclineDatastoreMemory(InclineDatastore):
             self.logdb[kid][val.get('pxn', 0)] = val
             return self.map_log_response(copy.deepcopy(val))
 
-    def ds_commit(self, kid, log, create=False):
+    def ds_commit(self, kid, log, mode=None):
         request_args = locals()
         with self.trace.span("incline.datastore.ds_commit") as span:
             self.map_request_span(request_args, span)
@@ -147,17 +150,20 @@ class InclineDatastoreMemory(InclineDatastore):
             org = self.only(self.ds_get_txn(kid))
             if org and 'tsv' in org:
                 orgtsv = org['tsv']
+            if org:
+                self.map_txn_span(org, span, prefix="org")
 
             # exists, can't create
             # TODO: better exception
-            if create:
+            if mode == 'create':
                 if kid in self.txndb:
                     raise ValueError
 
             val = self.gentxn(log, tsv=orgtsv)
+            self.map_txn_span(val, span, prefix="txn")
             if kid not in self.txndb:
                 self.txndb[kid] = {}
-            self.txndb[kid][log.get('tsv', 0)] = log
+            self.txndb[kid][log.get('tsv', 0)] = val
             return self.map_txn_response(copy.deepcopy(val))
 
     def ds_scan_log(self, kid=None, tsv=None, limit=None):
@@ -204,7 +210,7 @@ class InclineDatastoreMemory(InclineDatastore):
         request_args = locals()
         with self.trace.span("incline.datastore.ds_delete_log") as span:
             self.map_request_span(request_args, span)
-            
+
             if kid not in self.logdb:
                 return
             if pxn not in self.logdb[kid]:

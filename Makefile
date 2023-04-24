@@ -26,7 +26,7 @@ opentelemetry:
 	opentelemetry-bootstrap -a install
 
 lint:
-	yapf --in-place --verbose --recursive incline/
+	yapf --in-place --verbose --recursive incline/ tests/
 
 clean:
 	rm -rf incline.egg-info

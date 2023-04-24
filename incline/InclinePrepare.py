@@ -8,6 +8,7 @@ from incline import (INCLINE_TXN_MULTIPLY, INCLINE_TXN_QUANTIZE,
 
 
 class InclinePrepare(object):
+
     def __init__(self, cid=None):
         """
         cid: Client ID
@@ -27,8 +28,8 @@ class InclinePrepare(object):
         """
         pxn = '{0}.{1}'
         return pxn.format(
-                self.cid(),
-                base_encode(self.cnt()).rjust(INCLINE_TXN_BASEJUST, '0'))
+            self.cid(),
+            base_encode(self.cnt()).rjust(INCLINE_TXN_BASEJUST, '0'))
 
     def cmppxn(self, pxn1, pxn2):
         cid1 = pxn1.split('.')[0]

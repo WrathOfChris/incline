@@ -1,5 +1,6 @@
 import collections
 
+
 def flatten(val, prefix='', sep='.'):
     """
     flatten a value
