@@ -7,6 +7,7 @@ from incline.base62 import base_encode
 from incline.InclineDatastore import incline_resolve
 from incline.InclineDatastoreDynamo import InclineDatastoreDynamo
 from incline.InclinePrepare import InclinePrepare
+from incline.InclineTrace import InclineTrace
 from incline.router import InclineRouterOne
 from incline.error import InclineNotFound
 
@@ -18,7 +19,8 @@ class InclineClient(object):
                  region='us-west-2',
                  cid=None,
                  uid=None,
-                 rid=None):
+                 rid=None,
+                 trace=None):
         """
         cid: client Id
         uid: user Id
@@ -31,6 +33,11 @@ class InclineClient(object):
         self.__rid = rid
         self.rtr = InclineRouterOne(name=self.name, region=self.region)
         self.cons = list()
+
+        # Tracing
+        self.trace = trace
+        if not self.trace:
+            self.trace = InclineTrace(name=name)
 
         # Logging
         self.log = logging.getLogger('incline.client.' + self.name)
@@ -246,7 +253,8 @@ class InclineClient(object):
         loc = incline_resolve(location)
         if loc['dbtype'] == 'dynamo':
             con = InclineDatastoreDynamo(name=loc['name'],
-                                         region=loc['region'])
+                                         region=loc['region'],
+                                         trace=self.trace)
             con.rid(rid=self.__rid)
             con.uid(uid=self.__uid)
             con.pxn.cid(cid=self.pxn.cid())
