@@ -10,7 +10,7 @@ Usage:
 
 class InclineTrace(object):
 
-    def __init__(self, name='__name__', tracer=None, meter=None):
+    def __init__(self, name=__name__, tracer=None, meter=None):
         self.init(name, tracer, meter)
 
     def init(self, name, tracer, meter):

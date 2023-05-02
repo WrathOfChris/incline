@@ -56,6 +56,30 @@ class InclineClient(object):
                 return True
         return False
 
+    @property
+    def rid(self):
+        return self.__rid
+
+    @rid.setter
+    def rid(self, val):
+        if val:
+            self.__rid = val
+        if not self.__rid:
+            self.__rid = '0'
+        return self.__rid
+
+    @property
+    def uid(self):
+        return self.__uid
+
+    @uid.setter
+    def uid(self, val):
+        if val:
+            self.__uid = val
+        if not self.__uid:
+            self.__uid = '0'
+        return self.__uid
+
     def get(self, keys):
         vals = dict()
         if not keys:

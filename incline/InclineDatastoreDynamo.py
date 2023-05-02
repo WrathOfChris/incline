@@ -512,6 +512,8 @@ class InclineDatastoreDynamo(InclineDatastore):
                 'ReadCapacityUnits': rcu,
                 'WriteCapacityUnits': wcu
             })
+            # TODO: waiter = client.get_waiter('table_exists')
+            # TODO: waiter.wait(TableName=..., WaiterConfig={'Delay':  1})
 
     def ds_setup_txn(self, rcu=1, wcu=1):
         tablename = self.name + '-txn'
@@ -568,3 +570,5 @@ class InclineDatastoreDynamo(InclineDatastore):
                 'ReadCapacityUnits': rcu,
                 'WriteCapacityUnits': wcu
             })
+            # TODO: waiter = client.get_waiter('table_exists')
+            # TODO: waiter.wait(TableName=..., WaiterConfig={'Delay':  1})

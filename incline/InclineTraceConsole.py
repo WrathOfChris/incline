@@ -15,7 +15,7 @@ Usage:
 
 class InclineTraceConsole(InclineTrace):
 
-    def __init__(self, name='__name__', tracer=None, meter=None):
+    def __init__(self, name=__name__, tracer=None, meter=None):
         self.resource = Resource(attributes={SERVICE_NAME: "incline"})
 
         # TracerProvider
