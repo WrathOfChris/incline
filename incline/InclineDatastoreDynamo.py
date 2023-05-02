@@ -47,8 +47,8 @@ TXN FORMAT
 
 class InclineDatastoreDynamo(InclineDatastore):
 
-    def __init__(self, name='incline', region='us-west-2'):
-        self.init(name, region, dbtype='dynamo')
+    def __init__(self, name='incline', region='us-west-2', trace=None):
+        self.init(name, region, dbtype='dynamo', trace=trace)
         self.ds_init()
 
     def ds_init(self):

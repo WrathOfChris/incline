@@ -23,8 +23,8 @@ def incline_resolve(location, delimiter='|'):
 
 class InclineDatastore(object):
 
-    def __init__(self, name='incline', region='us-west-2'):
-        self.init(name=name, region=region)
+    def __init__(self, name='incline', region='us-west-2', trace=None):
+        self.init(name=name, region=region, trace=trace)
 
     def init(self, name, region, dbtype='none', trace=None):
         self.region = region

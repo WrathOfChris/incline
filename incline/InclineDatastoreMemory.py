@@ -51,8 +51,8 @@ class InclineDatastoreMemory(InclineDatastore):
     }
     """
 
-    def __init__(self, name='incline', region='us-west-2'):
-        self.init(name, region, dbtype='memory')
+    def __init__(self, name='incline', region='us-west-2', trace=None):
+        self.init(name, region, dbtype='memory', trace=trace)
         self.ds_init()
 
     def ds_init(self):
