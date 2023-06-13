@@ -146,7 +146,7 @@ class InclineClient(object):
         pxn = self.putatomic([{'kid': kid, 'dat': None}], mode='delete')
         return pxn
 
-    def getkey(self, key:  str) -> dict[str, Any]:
+    def getkey(self, key: str) -> dict[str, Any]:
         datastores = self.rtr.lookup('read', key)
         self.log.info('getkey %s [%s]', key, ','.join(datastores))
         vals = list()
@@ -170,7 +170,9 @@ class InclineClient(object):
             raise InclineNotFound('log not found in any datastore')
         return self.verify(vals)
 
-    def putatomic(self, dat: list[dict[str, Any]], mode: str | None = None) -> str:
+    def putatomic(self,
+                  dat: list[dict[str, Any]],
+                  mode: str | None = None) -> str:
         # TODO: check number ranges and data types (ex: dynamo decimal)
         datastores = list()
         pxn = self.pxn.pxn()
@@ -199,7 +201,12 @@ class InclineClient(object):
 
         return pxn
 
-    def genmet(self, datastores: list[str], datastore: str, kid: str, pxn: str, dat:  list[dict[str, Any]] = []) -> list[str | dict[str, Any]]:
+    def genmet(self,
+               datastores: list[str],
+               datastore: str,
+               kid: str,
+               pxn: str,
+               dat: list[dict[str, Any]] = []) -> list[str | dict[str, Any]]:
         """
         Generate metadata
         """
@@ -229,7 +236,7 @@ class InclineClient(object):
 
         return met
 
-    def cmpval(self, val1: dict[str,  Any], val2: dict[str,  Any]) -> bool:
+    def cmpval(self, val1: dict[str, Any], val2: dict[str, Any]) -> bool:
         if val1['dat'] == val2['dat']:
             return True
         return False

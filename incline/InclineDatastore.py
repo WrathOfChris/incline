@@ -128,7 +128,10 @@ class InclineDatastore(object):
             val = self.prepare_val(kid, pxn, met, dat)
             return self.ds_prepare(kid, val)
 
-    def commit(self, kid: str, pxn: str, mode: str | None = None) -> list[dict[str, Any]]:
+    def commit(self,
+               kid: str,
+               pxn: str,
+               mode: str | None = None) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.commit") as span:
             self.map_request_span(request_args, span)
@@ -156,7 +159,9 @@ class InclineDatastore(object):
         }
         return log
 
-    def gentxn(self, log: dict[str, Any], tsv: Decimal | int = Decimal(0)) -> dict[str, Any]:
+    def gentxn(
+        self, log: dict[str, Any],
+        tsv: Decimal | int = Decimal(0)) -> dict[str, Any]:
         # Set tombstone when empty data
         tmb = Decimal(0)
         if log['dat'] is None:
@@ -194,7 +199,10 @@ class InclineDatastore(object):
     Return a metadata item
     """
 
-    def meta(self, kid: str, pxn: str = '0', loc: str | None = None) -> dict[str, Any]:
+    def meta(self,
+             kid: str,
+             pxn: str = '0',
+             loc: str | None = None) -> dict[str, Any]:
         if not loc:
             loc = self.loc()
         return {'kid': kid, 'loc': loc, 'pxn': pxn}
@@ -203,7 +211,8 @@ class InclineDatastore(object):
     Fully qualify metadata with DB type and name
     """
 
-    def canon_metadata(self, met: list[str | dict[str, Any]]) -> list[dict[str, Any]]:
+    def canon_metadata(
+            self, met: list[str | dict[str, Any]]) -> list[dict[str, Any]]:
         metadata: list[dict[str, Any]] = list()
         if not met:
             return metadata
@@ -262,7 +271,9 @@ class InclineDatastore(object):
                 val[k] = self.numbers_to_remote(val[k])
         return val
 
-    def numbers_to_local(self, val: Decimal | float | int | list[Any] | dict[Any, Any]) -> Any:
+    def numbers_to_local(
+            self,
+            val: Decimal | float | int | list[Any] | dict[Any, Any]) -> Any:
         """
         Convert numbers to local.  Default is Decimal to float/int
         """
@@ -298,7 +309,9 @@ class InclineDatastore(object):
             return None
         return val[0]
 
-    def map_log_response(self, resp: list[dict[str, Any]] | dict[str, Any]) -> list[dict[str, Any]]:
+    def map_log_response(
+            self, resp: list[dict[str, Any]] | dict[str, Any]
+    ) -> list[dict[str, Any]]:
         if not isinstance(resp, list):
             resp = [resp]
         results = list()
@@ -311,7 +324,9 @@ class InclineDatastore(object):
                 results.append(r)
         return results
 
-    def map_txn_response(self, resp: list[dict[str, Any]] | dict[str, Any]) -> list[dict[str, Any]]:
+    def map_txn_response(
+            self, resp: list[dict[str, Any]] | dict[str, Any]
+    ) -> list[dict[str, Any]]:
         if not isinstance(resp, list):
             resp = [resp]
         results = list()
@@ -393,7 +408,10 @@ class InclineDatastore(object):
                 continue
             span.set_attribute(k, v)
 
-    def map_txn_span(self, value: Any, span: Span, prefix: str = "response") -> None:
+    def map_txn_span(self,
+                     value: Any,
+                     span: Span,
+                     prefix: str = "response") -> None:
         """
         map a dict of arguments into span attributes
         filter out 'dat' to avoid tracing stored data
@@ -410,7 +428,10 @@ class InclineDatastore(object):
                 continue
             span.set_attribute(k, v)
 
-    def map_log_span(self, value: Any, span: Span, prefix: str = "response") -> None:
+    def map_log_span(self,
+                     value: Any,
+                     span: Span,
+                     prefix: str = "response") -> None:
         """
         map a dict of arguments into span attributes
         filter out 'dat' to avoid tracing stored data
@@ -447,19 +468,30 @@ class InclineDatastore(object):
     Methods to override
     """
 
-    def ds_get_log(self, kid: str, pxn: str | None = None) -> list[dict[str, Any]]:
+    def ds_get_log(self,
+                   kid: str,
+                   pxn: str | None = None) -> list[dict[str, Any]]:
         return []
 
-    def ds_get_txn(self, kid: str, tsv: Decimal | None = None, limit: int = 1) -> list[dict[str, Any]]:
+    def ds_get_txn(self,
+                   kid: str,
+                   tsv: Decimal | None = None,
+                   limit: int = 1) -> list[dict[str, Any]]:
         return []
 
-    def ds_prepare(self, kid: str, val: dict[str, Any]) -> list[dict[str, Any]]:
+    def ds_prepare(self, kid: str, val: dict[str,
+                                             Any]) -> list[dict[str, Any]]:
         return []
 
-    def ds_commit(self, kid: str, log: dict[str, Any], mode: str | None = None) -> list[dict[str, Any]]:
+    def ds_commit(self,
+                  kid: str,
+                  log: dict[str, Any],
+                  mode: str | None = None) -> list[dict[str, Any]]:
         return []
 
-    def ds_scan_log(self, kid: str | None = None, tsv: Decimal | None = None,
+    def ds_scan_log(self,
+                    kid: str | None = None,
+                    tsv: Decimal | None = None,
                     limit: int | None = None) -> list[dict[str, Any]]:
         return []
 

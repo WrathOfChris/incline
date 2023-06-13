@@ -17,9 +17,7 @@ class InclineTrace(object):
                  meter: metrics.Meter | None = None):
         self.init(name, tracer, meter)
 
-    def init(self,
-             name: str,
-             tracer: trace.Tracer | None,
+    def init(self, name: str, tracer: trace.Tracer | None,
              meter: metrics.Meter | None) -> None:
         if hasattr(self, 'trace_provider'):
             trace.set_tracer_provider(self.trace_provider)
@@ -34,5 +32,6 @@ class InclineTrace(object):
         if not self.meter:
             self.meter = metrics.get_meter(name)
 
-    def span(self, name: str) -> contextlib.AbstractContextManager[trace.span.Span]:
+    def span(self,
+             name: str) -> contextlib.AbstractContextManager[trace.span.Span]:
         return self.tracer.start_as_current_span(name)

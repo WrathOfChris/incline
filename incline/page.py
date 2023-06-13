@@ -2,7 +2,8 @@ from typing import Any
 import collections.abc
 
 
-def page(iterable: Any, count: int) -> collections.abc.Generator[list[Any], None, None]:
+def page(iterable: Any,
+         count: int) -> collections.abc.Generator[list[Any], None, None]:
     """
     generate a list of lists
     ex: list(page(range(1,10), 3)) ->  [[1,2,3], [4,5,6], [7,8,9]]

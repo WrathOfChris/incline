@@ -9,7 +9,6 @@ from opentelemetry.sdk.metrics.export import (ConsoleMetricExporter,
                                               PeriodicExportingMetricReader)
 from opentelemetry.ext.honeycomb import HoneycombSpanExporter
 import os
-
 """
 Usage:
     with <trace>.tracer.start_as_current_span(name) as span:
@@ -27,15 +26,15 @@ class InclineTraceHoneycomb(InclineTrace):
 
         # TracerProvider
         self.trace_provider = TracerProvider(resource=self.resource)
-        self.trace_processor = BatchSpanProcessor(HoneycombSpanExporter(
-            service_name="incline",
-            writekey=os.getenv("HONEYCOMB_API_KEY")))
+        self.trace_processor = BatchSpanProcessor(
+            HoneycombSpanExporter(service_name="incline",
+                                  writekey=os.getenv("HONEYCOMB_API_KEY")))
         self.trace_provider.add_span_processor(self.trace_processor)
 
         # MetricsProvider
         # XXX TODO Honeycomb has no HoneycombMetricExporter
         self.metric_reader = PeriodicExportingMetricReader(
-                ConsoleMetricExporter())
+            ConsoleMetricExporter())
         self.meter_provider = MeterProvider(
             metric_readers=[self.metric_reader])
 

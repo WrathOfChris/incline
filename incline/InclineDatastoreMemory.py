@@ -95,7 +95,9 @@ class InclineDatastoreMemory(InclineDatastore):
         # Same ClientID and Counter
         return 0
 
-    def ds_get_log(self, kid: str, pxn: Any | None = None) -> list[dict[str, Any]]:
+    def ds_get_log(self,
+                   kid: str,
+                   pxn: Any | None = None) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.datastore.ds_get_log") as span:
             self.map_request_span(request_args, span)
@@ -146,7 +148,10 @@ class InclineDatastoreMemory(InclineDatastore):
             self.logdb[kid][val.get('pxn', 0)] = val
             return self.map_log_response(copy.deepcopy(val))
 
-    def ds_commit(self, kid: str, log: Any, mode: str | None = None) -> list[dict[str, Any]]:
+    def ds_commit(self,
+                  kid: str,
+                  log: Any,
+                  mode: str | None = None) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.datastore.ds_commit") as span:
             self.map_request_span(request_args, span)
@@ -175,7 +180,7 @@ class InclineDatastoreMemory(InclineDatastore):
     def ds_scan_log(self,
                     kid: str | None = None,
                     tsv: Decimal | None = None,
-                    limit: int | None = None) -> list[dict[str,  Any]]:
+                    limit: int | None = None) -> list[dict[str, Any]]:
         """
         return list of [{'kid': kid, 'tsv': tsv}]
         """

@@ -16,7 +16,7 @@ import botocore
 from opentelemetry.trace.span import Span
 
 # Instrument Botocore
-BotocoreInstrumentor().instrument() # type: ignore
+BotocoreInstrumentor().instrument()    # type: ignore
 """
 LOG FORMAT
 {
@@ -75,7 +75,9 @@ class InclineDatastoreDynamo(InclineDatastore):
                 region_name=self.region,
                 config=botocore.config.Config(retries={'mode': 'adaptive'}))
 
-    def ds_get_log(self, kid: str, pxn: str | None = None) -> list[dict[str, Any]]:
+    def ds_get_log(self,
+                   kid: str,
+                   pxn: str | None = None) -> list[dict[str, Any]]:
         request_args = locals()
         if not isinstance(kid, str):
             raise InclineInterface(f"key must be string not {type(kid)}")
@@ -90,8 +92,9 @@ class InclineDatastoreDynamo(InclineDatastore):
                     'pxn').eq(pxn)
             else:
                 self.log.info('getlog %s', kid)
-                kwargs['KeyConditionExpression'] = Key('kid').eq(kid)   # type: ignore
-                kwargs['ScanIndexForward'] = False  # type:ignore
+                kwargs['KeyConditionExpression'] = Key('kid').eq(
+                    kid)    # type: ignore
+                kwargs['ScanIndexForward'] = False    # type:ignore
 
             with self.trace.span("aws.dynamodb.query") as span_query:
                 try:
@@ -134,10 +137,11 @@ class InclineDatastoreDynamo(InclineDatastore):
                     'tsv').eq(tsv)
             else:
                 self.log.info('gettxn %s', kid)
-                kwargs['KeyConditionExpression'] = Key('kid').eq(kid) # type: ignore
-                kwargs['ScanIndexForward'] = False  # type: ignore
+                kwargs['KeyConditionExpression'] = Key('kid').eq(
+                    kid)    # type: ignore
+                kwargs['ScanIndexForward'] = False    # type: ignore
                 if limit:
-                    kwargs['Limit'] = limit # type: ignore
+                    kwargs['Limit'] = limit    # type: ignore
 
             with self.trace.span("aws.dynamodb.query") as span_query:
                 try:
@@ -178,7 +182,10 @@ class InclineDatastoreDynamo(InclineDatastore):
                 self.map_aws_response_span(resp, span_put)
                 return [val]
 
-    def ds_commit(self, kid: str, log: Any, mode: str | None = None) -> list[dict[str, Any]]:
+    def ds_commit(self,
+                  kid: str,
+                  log: Any,
+                  mode: str | None = None) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.datastore.ds_commit") as span:
             self.map_request_span(request_args, span)
@@ -315,7 +322,8 @@ class InclineDatastoreDynamo(InclineDatastore):
                         Key('key').eq(kid) & Key('tsv').lte(tsv)
             elif kid and not tsv:
                 self.log.info(f"scantxn {kid}")
-                kwargs['FilterExpression'] = Key('key').eq(kid)  # type: ignore
+                kwargs['FilterExpression'] = Key('key').eq(
+                    kid)    # type: ignore
             elif not kid and tsv:
                 self.log.info(f"scantxn tsv {tsv}")
                 kwargs['FilterExpression'] = \
@@ -400,7 +408,8 @@ class InclineDatastoreDynamo(InclineDatastore):
                         or resp['Attributes'].get('tsv') != tsv):
                     raise InclineNotFound(f"cannot delete {kid} tsv {tsv}")
 
-    def map_log_response_dynamo(self, resp: dict[str, Any]) -> list[dict[str, Any]]:
+    def map_log_response_dynamo(self, resp: dict[str,
+                                                 Any]) -> list[dict[str, Any]]:
         """
         Pass Dynamo Items to InclineDatastore.map_log_response
         """
@@ -408,12 +417,14 @@ class InclineDatastoreDynamo(InclineDatastore):
             raise InclineDataError('map log invalid items')
         return self.map_log_response(resp['Items'])
 
-    def map_txn_response_dynamo(self, resp: dict[str, Any]) -> list[dict[str, Any]]:
+    def map_txn_response_dynamo(self, resp: dict[str,
+                                                 Any]) -> list[dict[str, Any]]:
         if 'Items' not in resp:
             raise InclineDataError('map txn invalid items')
         return self.map_txn_response(resp['Items'])
 
-    def map_scan_log_response(self, resp: dict[str, Any]) -> list[dict[str, Any]]:
+    def map_scan_log_response(self, resp: dict[str,
+                                               Any]) -> list[dict[str, Any]]:
         if 'Items' not in resp:
             raise InclineDataError('map scan invalid items')
         """
@@ -432,7 +443,8 @@ class InclineDatastoreDynamo(InclineDatastore):
             results.append(data)
         return results
 
-    def map_scan_txn_response(self, resp: dict[str, Any]) -> list[dict[str, Any]]:
+    def map_scan_txn_response(self, resp: dict[str,
+                                               Any]) -> list[dict[str, Any]]:
         if 'Items' not in resp:
             raise InclineDataError('map scan invalid items')
         """
@@ -526,8 +538,8 @@ class InclineDatastoreDynamo(InclineDatastore):
                 'ReadCapacityUnits': rcu,
                 'WriteCapacityUnits': wcu
             })
-            # TODO: waiter = client.get_waiter('table_exists')
-            # TODO: waiter.wait(TableName=..., WaiterConfig={'Delay':  1})
+        # TODO: waiter = client.get_waiter('table_exists')
+        # TODO: waiter.wait(TableName=..., WaiterConfig={'Delay':  1})
 
     def ds_setup_txn(self, rcu: int = 1, wcu: int = 1) -> None:
         tablename = self.name + '-txn'
@@ -584,5 +596,5 @@ class InclineDatastoreDynamo(InclineDatastore):
                 'ReadCapacityUnits': rcu,
                 'WriteCapacityUnits': wcu
             })
-            # TODO: waiter = client.get_waiter('table_exists')
-            # TODO: waiter.wait(TableName=..., WaiterConfig={'Delay':  1})
+        # TODO: waiter = client.get_waiter('table_exists')
+        # TODO: waiter.wait(TableName=..., WaiterConfig={'Delay':  1})
