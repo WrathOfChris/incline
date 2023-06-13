@@ -3,22 +3,22 @@ from incline.error import InclineError, InclineInterface, InclineNotFound
 
 class InclineRouter(object):
 
-    def __init__(self, name='incline', region='us-west-2'):
+    def __init__(self, name: str = 'incline', region: str = 'us-west-2'):
         self.init(name=name, region=region)
 
-    def init(self, name, region):
+    def init(self, name: str, region: str) -> None:
         self.name = name
         self.region = region
         self.delimiter = '|'
-        self.route_read = list()
-        self.route_write = list()
-        self.route_search = list()
+        self.route_read: list[str] = list()
+        self.route_write: list[str] = list()
+        self.route_search: list[str] = list()
         self.default()
 
-    def default(self):
+    def default(self) -> None:
         pass
 
-    def lookup(self, action, kid):
+    def lookup(self, action: str, kid: str) -> list[str]:
         if action == "read":
             return self.read
         elif action == "write":
@@ -29,24 +29,24 @@ class InclineRouter(object):
             raise InclineNotFound('router invalid lookup action')
 
     @property
-    def read(self):
+    def read(self) -> list[str]:
         return self.route_read
 
     @property
-    def write(self):
+    def write(self) -> list[str]:
         return self.route_write
 
     @property
-    def search(self):
+    def search(self) -> list[str]:
         return self.route_search
 
 
 class InclineRouterOne(InclineRouter):
 
-    def __init__(self, name='incline', region='us-west-2'):
+    def __init__(self, name: str = 'incline', region: str = 'us-west-2'):
         self.init(name=name, region=region)
 
-    def default(self):
+    def default(self) -> None:
         self.route_read = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
                                         self.delimiter, self.name)
@@ -63,10 +63,10 @@ class InclineRouterOne(InclineRouter):
 
 class InclineRouterTwo(InclineRouter):
 
-    def __init__(self, name='incline', region='us-west-2'):
+    def __init__(self, name: str = 'incline', region: str = 'us-west-2'):
         self.init(name=name, region=region)
 
-    def default(self):
+    def default(self) -> None:
         self.route_read = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
                                         self.delimiter, self.name + '1'),
@@ -94,10 +94,10 @@ class InclineRouterRead1(InclineRouter):
     Read 1
     """
 
-    def __init__(self, name='incline', region='us-west-2'):
+    def __init__(self, name: str = 'incline', region: str = 'us-west-2'):
         self.init(name=name, region=region)
 
-    def default(self):
+    def default(self) -> None:
         # XXX FOR TESTING XXX
         self.route_read = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,
@@ -124,10 +124,10 @@ class InclineRouterRead2(InclineRouter):
     Read 2
     """
 
-    def __init__(self, name='incline', region='us-west-2'):
+    def __init__(self, name: str = 'incline', region: str = 'us-west-2'):
         self.init(name=name, region=region)
 
-    def default(self):
+    def default(self) -> None:
         # XXX FOR TESTING XXX
         self.route_read = [
             'dynamo{0}{1}{2}{3}'.format(self.delimiter, self.region,

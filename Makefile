@@ -14,6 +14,7 @@ depend:
 	python3 -m pip install --requirement requirements.txt
 
 depend-dev:
+	python3 -m pip install --requirement requirements-dev.txt
 	python3 -m pip install -e ".[dev]"
 
 install:
@@ -27,6 +28,12 @@ opentelemetry:
 
 lint:
 	yapf --in-place --verbose --recursive incline/ tests/
+
+typecheck:
+	mypy --non-interactive \
+		--install-types \
+		--config-file mypy.ini \
+		incline/ bin/
 
 clean:
 	rm -rf incline.egg-info

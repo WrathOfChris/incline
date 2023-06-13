@@ -1,7 +1,8 @@
 import collections
+from typing import Any
 
 
-def flatten(val, prefix='', sep='.'):
+def flatten(val: Any, prefix: str = '', sep: str = '.') -> dict[str, Any]:
     """
     flatten a value
     """

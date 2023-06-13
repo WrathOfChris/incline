@@ -1,11 +1,13 @@
+import copy
+from decimal import Decimal
+from typing import Any
 from incline.InclineDatastore import InclineDatastore
+from incline.InclineTrace import InclineTrace
 from incline.error import (InclineError, InclineExists, InclineDataError,
                            InclineNotFound)
-import decimal
-import copy
 
 # global memory store
-DATASTORE_MEMORY = dict()
+DATASTORE_MEMORY: dict[str, dict[str, Any]] = dict()
 """
 LOG FORMAT
 {
@@ -51,17 +53,18 @@ class InclineDatastoreMemory(InclineDatastore):
     }
     """
 
-    def __init__(self, name='incline', region='us-west-2', trace=None):
+    def __init__(self,
+                 name: str = 'incline',
+                 region: str = 'us-west-2',
+                 trace: InclineTrace | None = None):
         self.init(name, region, dbtype='memory', trace=trace)
         self.ds_init()
 
-    def ds_init(self):
+    def ds_init(self) -> None:
         global DATASTORE_MEMORY
 
         self.logname = self.name + '-log'
         self.txnname = self.name + '-txn'
-        self.logdb = None
-        self.txndb = None
 
         if self.logname not in DATASTORE_MEMORY:
             DATASTORE_MEMORY[self.logname] = dict()
@@ -71,7 +74,7 @@ class InclineDatastoreMemory(InclineDatastore):
             DATASTORE_MEMORY[self.txnname] = dict()
         self.txndb = DATASTORE_MEMORY[self.txnname]
 
-    def cmppxn(self, pxn1, pxn2):
+    def cmppxn(self, pxn1: str, pxn2: str) -> int:
         cid1 = pxn1.split('.')[0]
         cnt1 = pxn1.split('.')[1]
         cid2 = pxn2.split('.')[0]
@@ -92,7 +95,7 @@ class InclineDatastoreMemory(InclineDatastore):
         # Same ClientID and Counter
         return 0
 
-    def ds_get_log(self, kid, pxn=None):
+    def ds_get_log(self, kid: str, pxn: Any | None = None) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.datastore.ds_get_log") as span:
             self.map_request_span(request_args, span)
@@ -109,12 +112,15 @@ class InclineDatastoreMemory(InclineDatastore):
             self.map_response_span(local_resp, span)
             return local_resp
 
-    def ds_get_txn(self, kid, tsv=None, limit=1):
+    def ds_get_txn(self,
+                   kid: str,
+                   tsv: int | str | Decimal | None = None,
+                   limit: int = 1) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.datastore.ds_get_txn") as span:
             self.map_request_span(request_args, span)
 
-            if tsv and not isinstance(tsv, decimal.Decimal):
+            if tsv and not isinstance(tsv, Decimal):
                 tsv = self.pxn.decimal(tsv)
 
             txn = self.txndb.get(kid)
@@ -131,7 +137,7 @@ class InclineDatastoreMemory(InclineDatastore):
             self.map_response_span(local_resp, span)
             return local_resp
 
-    def ds_prepare(self, kid, val):
+    def ds_prepare(self, kid: str, val: Any) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.datastore.ds_prepare") as span:
             self.map_request_span(request_args, span)
@@ -140,7 +146,7 @@ class InclineDatastoreMemory(InclineDatastore):
             self.logdb[kid][val.get('pxn', 0)] = val
             return self.map_log_response(copy.deepcopy(val))
 
-    def ds_commit(self, kid, log, mode=None):
+    def ds_commit(self, kid: str, log: Any, mode: str | None = None) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.datastore.ds_commit") as span:
             self.map_request_span(request_args, span)
@@ -166,7 +172,10 @@ class InclineDatastoreMemory(InclineDatastore):
             self.txndb[kid][log.get('tsv', 0)] = val
             return self.map_txn_response(copy.deepcopy(val))
 
-    def ds_scan_log(self, kid=None, tsv=None, limit=None):
+    def ds_scan_log(self,
+                    kid: str | None = None,
+                    tsv: Decimal | None = None,
+                    limit: int | None = None) -> list[dict[str,  Any]]:
         """
         return list of [{'kid': kid, 'tsv': tsv}]
         """
@@ -178,7 +187,7 @@ class InclineDatastoreMemory(InclineDatastore):
             if kid:
                 keys = [kid]
             else:
-                keys = self.logdb.keys()
+                keys = list(self.logdb.keys())
 
             for key in keys:
                 for k, v in self.logdb.get(key, {}).items():
@@ -186,19 +195,22 @@ class InclineDatastoreMemory(InclineDatastore):
 
             return logs
 
-    def ds_scan_txn(self, kid=None, tsv=None, limit=None):
+    def ds_scan_txn(self,
+                    kid: str | None = None,
+                    tsv: Decimal | int | str | None = None,
+                    limit: int | None = None) -> list[dict[str, Any]]:
         request_args = locals()
         txns = list()
         with self.trace.span("incline.datastore.ds_scan_txn") as span:
             self.map_request_span(request_args, span)
 
-            if tsv and not isinstance(tsv, decimal.Decimal):
+            if tsv and not isinstance(tsv, Decimal):
                 tsv = self.pxn.decimal(tsv)
 
             if kid:
                 keys = [kid]
             else:
-                keys = self.txndb.keys()
+                keys = list(self.txndb.keys())
 
             for key in keys:
                 for k, v in self.txndb.get(key, {}).items():
@@ -206,7 +218,7 @@ class InclineDatastoreMemory(InclineDatastore):
 
             return txns
 
-    def ds_delete_log(self, kid, pxn):
+    def ds_delete_log(self, kid: str, pxn: str) -> None:
         request_args = locals()
         with self.trace.span("incline.datastore.ds_delete_log") as span:
             self.map_request_span(request_args, span)
@@ -219,7 +231,7 @@ class InclineDatastoreMemory(InclineDatastore):
             if not self.logdb[kid]:
                 del self.logdb[kid]
 
-    def ds_delete_txn(self, kid, tsv):
+    def ds_delete_txn(self, kid: str, tsv: Decimal) -> None:
         request_args = locals()
         with self.trace.span("incline.datastore.ds_delete_txn") as span:
             self.map_request_span(request_args, span)

@@ -1,4 +1,4 @@
-boto3>=1.26.115,<2
+boto3>=1.26.151,<2
 opentelemetry-api>=1.17.0,<2
 opentelemetry-sdk>=1.17.0,<2
 opentelemetry-instrumentation-aws-lambda==0.38b0

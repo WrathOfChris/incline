@@ -4,7 +4,7 @@ BASE_LIST = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 BASE_DICT = dict((c, i) for i, c in enumerate(BASE_LIST))
 
 
-def base_decode(string, reverse_base=BASE_DICT):
+def base_decode(string: str, reverse_base: dict[str, int] = BASE_DICT) -> int:
     string = str(string)
     length = len(reverse_base)
     ret = 0
@@ -14,7 +14,7 @@ def base_decode(string, reverse_base=BASE_DICT):
     return ret
 
 
-def base_encode(integer, base=BASE_LIST):
+def base_encode(integer: int, base: str = BASE_LIST) -> str:
     if integer <= 0:
         return base[0]
 

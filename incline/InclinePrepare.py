@@ -1,24 +1,26 @@
-import decimal
+from decimal import Decimal
 import numbers
 import time
 import uuid
 from incline.base62 import base_encode
-from incline import (INCLINE_TXN_MULTIPLY, INCLINE_TXN_QUANTIZE,
-                     INCLINE_TXN_BASEJUST)
+
+INCLINE_TXN_MULTIPLY = 1000000000
+INCLINE_TXN_QUANTIZE = "1.000000"
+INCLINE_TXN_BASEJUST = 11
 
 
 class InclinePrepare(object):
 
-    def __init__(self, cid=None):
+    def __init__(self, cid: str | None = None):
         """
         cid: Client ID
         tsv: TimeStamp Value
         """
         self.__cid = cid
-        self.__tsv = decimal.Decimal(0)
-        self.__cnt = self.__tsv
+        self.__tsv = Decimal(0)
+        self.__cnt = int(0)
 
-    def pxn(self):
+    def pxn(self) -> str:
         """
         Prepare Transaction ID.
         Timestamps should be unique across transactions, and for session
@@ -31,7 +33,7 @@ class InclinePrepare(object):
             self.cid(),
             base_encode(self.cnt()).rjust(INCLINE_TXN_BASEJUST, '0'))
 
-    def cmppxn(self, pxn1, pxn2):
+    def cmppxn(self, pxn1: str, pxn2: str) -> int:
         cid1 = pxn1.split('.')[0]
         cnt1 = pxn1.split('.')[1]
         cid2 = pxn2.split('.')[0]
@@ -52,7 +54,7 @@ class InclinePrepare(object):
         # Same ClientID and Counter
         return 0
 
-    def cid(self, cid=None):
+    def cid(self, cid: str | int | None = None) -> str:
         """
         Client ID. Provided by client, MAC address or random number.  Encode
         base-62 if CID is a number.
@@ -61,12 +63,12 @@ class InclinePrepare(object):
             if not cid:
                 cid = uuid.getnode()
             if isinstance(cid, numbers.Number):
-                self.__cid = base_encode(cid)
+                self.__cid = base_encode(int(cid))
             else:
-                self.__cid = cid
+                self.__cid = str(cid)
         return self.__cid
 
-    def cnt(self, cnt=None):
+    def cnt(self, cnt: int | None = None) -> int:
         """
         Monotonic timestamp counter
         """
@@ -78,7 +80,7 @@ class InclinePrepare(object):
         self.__cnt = cnt
         return self.__cnt
 
-    def now(self):
+    def now(self) -> Decimal:
         """
         Monotonic nanosecond UTC timestamp
         """
@@ -88,6 +90,5 @@ class InclinePrepare(object):
         self.__tsv = now
         return now
 
-    def decimal(self, number):
-        return decimal.Decimal(number).quantize(
-            decimal.Decimal(INCLINE_TXN_QUANTIZE))
+    def decimal(self, number: str | int | float | Decimal) -> Decimal:
+        return Decimal(number).quantize(Decimal(INCLINE_TXN_QUANTIZE))
