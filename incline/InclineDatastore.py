@@ -355,7 +355,7 @@ class InclineDatastore(object):
             'kid', 'tsv', 'pxn', 'tmb', 'cid', 'uid', 'rid', 'org', 'ver',
             'met', 'dat'
         ]
-        r = dict()
+        r: dict[str, Any] = dict()
         for k in keys:
             if k in resp:
                 if k == 'ver':
