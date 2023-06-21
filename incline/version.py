@@ -4,7 +4,7 @@ import platform
 import importlib.metadata
 
 
-def incline_version() -> dict:
+def incline_version() -> dict[str, str]:
     return {
         "incline": __version__,
         "python": platform.python_version(),

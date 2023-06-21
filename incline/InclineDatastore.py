@@ -2,10 +2,12 @@ from incline.error import (InclineError, InclineExists, InclineDataError,
                            InclineNotFound, InclineInterface)
 from incline.base62 import base_encode
 from incline.flatten import flatten
+from incline.InclineMeta import InclineMeta, InclineMetaWrite
 from incline.InclinePrepare import InclinePrepare
 from incline.InclinePrepare import (INCLINE_TXN_MULTIPLY, INCLINE_TXN_QUANTIZE,
                                     INCLINE_TXN_BASEJUST)
 from incline.InclineTrace import InclineTrace
+import copy
 from decimal import Decimal
 import logging
 import sys
@@ -105,7 +107,7 @@ class InclineDatastore(object):
 
             return results
 
-    def prepare_val(self, kid: str, pxn: str, met: list[str | dict[str, Any]],
+    def prepare_val(self, kid: str, pxn: str, met: InclineMeta,
                     dat: dict[str, Any]) -> dict[str, Any]:
         return {
             'kid': kid,
@@ -115,11 +117,11 @@ class InclineDatastore(object):
             'uid': self.uid(),
             'rid': self.rid(),
             'ver': self.version,
-            'met': self.canon_metadata(met),
+            'met': self.canon_metadata(met).to_dict(),
             'dat': dat
         }
 
-    def prepare(self, kid: str, pxn: str, met: list[str | dict[str, Any]],
+    def prepare(self, kid: str, pxn: str, met: InclineMeta,
                 dat: dict[str, Any]) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.prepare") as span:
@@ -144,7 +146,7 @@ class InclineDatastore(object):
         with self.trace.span("incline.setup") as span:
             return self.ds_setup()
 
-    def genlog(self, kid: str, pxn: str, met: list[str | dict[str, Any]],
+    def genlog(self, kid: str, pxn: str, met: InclineMeta,
                dat: dict[str, Any]) -> dict[str, Any]:
         log = {
             'kid': kid,
@@ -154,7 +156,7 @@ class InclineDatastore(object):
             'uid': self.uid(),
             'rid': self.rid(),
             'ver': self.version,
-            'met': self.canon_metadata(met),
+            'met': self.canon_metadata(met).to_dict(),
             'dat': dat
         }
         return log
@@ -196,44 +198,25 @@ class InclineDatastore(object):
                                         self.region, self.delimiter, self.name)
 
     """
-    Return a metadata item
-    """
-
-    def meta(self,
-             kid: str,
-             pxn: str = '0',
-             loc: str | None = None) -> dict[str, Any]:
-        if not loc:
-            loc = self.loc()
-        return {'kid': kid, 'loc': loc, 'pxn': pxn}
-
-    """
     Fully qualify metadata with DB type and name
     """
 
-    def canon_metadata(
-            self, met: list[str | dict[str, Any]]) -> list[dict[str, Any]]:
-        metadata: list[dict[str, Any]] = list()
+    def canon_metadata(self, met: InclineMeta) -> InclineMeta:
+        metadata = InclineMeta()
         if not met:
             return metadata
-        if not isinstance(met, list):
+        if not isinstance(met, InclineMeta):
             raise InclineInterface('invalid metadata')
-        for m in met:
-            if isinstance(m, str):
-                val = self.meta(m)
-            elif isinstance(m, dict):
-                pxn = '0'
-                loc = None
-                if 'kid' not in m:
-                    raise InclineInterface('metadata missing key id')
-                if 'pxn' in m:
-                    pxn = m['pxn']
-                if 'loc' in m:
-                    loc = m['loc']
-                val = self.meta(m['kid'], pxn=pxn, loc=loc)
-            else:
-                raise InclineInterface('metadata includes invalid type')
-            metadata.append(val)
+        for meta in met.meta:
+            m = copy.deepcopy(meta)
+            if not m.kid:
+                raise InclineInterface('metadata missing key id')
+            # Key ID only is implicitly a local write
+            if not m.loc:
+                m.loc = self.loc()
+            if not m.pxn:
+                m.pxn = '0'
+            metadata.add_write(m)
         return metadata
 
     def uid(self, uid: str | None = None) -> str:

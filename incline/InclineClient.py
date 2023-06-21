@@ -7,6 +7,7 @@ from typing import Any
 from incline.base62 import base_encode
 from incline.InclineDatastore import incline_resolve
 from incline.InclineDatastoreDynamo import InclineDatastoreDynamo
+from incline.InclineMeta import InclineMeta, InclineMetaWrite
 from incline.InclinePrepare import InclinePrepare
 from incline.InclineTrace import InclineTrace
 from incline.router import InclineRouterOne
@@ -206,11 +207,11 @@ class InclineClient(object):
                datastore: str,
                kid: str,
                pxn: str,
-               dat: list[dict[str, Any]] = []) -> list[str | dict[str, Any]]:
+               dat: list[dict[str, Any]] = []) -> InclineMeta:
         """
         Generate metadata
         """
-        met: list[str | dict[str, Any]] = list()
+        met = InclineMeta()
         for ds in datastores:
             con = self.ds_open(ds)
 
@@ -218,7 +219,7 @@ class InclineClient(object):
             if ds == datastore:
                 continue
 
-            met.append(con.meta(kid, pxn))
+            met.add_write(InclineMetaWrite(kid, con.loc(), pxn))
 
         # no data provided, delete/tombstone
         if not dat:
@@ -232,7 +233,7 @@ class InclineClient(object):
 
             for ds in d['datastores']:
                 con = self.ds_open(ds)
-                met.append(con.meta(d['kid'], pxn))
+                met.add_write(InclineMetaWrite(d['kid'], con.loc(), pxn))
 
         return met
 
