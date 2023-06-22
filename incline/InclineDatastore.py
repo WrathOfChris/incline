@@ -3,9 +3,7 @@ from incline.error import (InclineError, InclineExists, InclineDataError,
 from incline.base62 import base_encode
 from incline.flatten import flatten
 from incline.InclineMeta import InclineMeta, InclineMetaWrite
-from incline.InclinePrepare import InclinePrepare
-from incline.InclinePrepare import (INCLINE_TXN_MULTIPLY, INCLINE_TXN_QUANTIZE,
-                                    INCLINE_TXN_BASEJUST)
+from incline.InclinePrepare import InclinePrepare, InclinePxn
 from incline.InclineTrace import InclineTrace
 import copy
 from decimal import Decimal
@@ -72,7 +70,7 @@ class InclineDatastore(object):
     def get(self,
             kid: str,
             tsv: Decimal | None = None,
-            pxn: str | None = None) -> list[dict[str, Any]]:
+            pxn: InclinePxn | None = None) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.get") as span:
             self.map_request_span(request_args, span)
@@ -80,7 +78,7 @@ class InclineDatastore(object):
                 self.log.info('get %s tsv %s', kid, tsv)
                 return self.ds_get_txn(kid, tsv)
             elif pxn:
-                self.log.info('get %s pxn %s', kid, pxn)
+                self.log.info('get %s pxn %s', kid, format(pxn))
                 return self.ds_get_log(kid, pxn)
 
             self.log.info('get %s', kid)
@@ -107,11 +105,11 @@ class InclineDatastore(object):
 
             return results
 
-    def prepare_val(self, kid: str, pxn: str, met: InclineMeta,
+    def prepare_val(self, kid: str, pxn: InclinePxn, met: InclineMeta,
                     dat: dict[str, Any]) -> dict[str, Any]:
         return {
             'kid': kid,
-            'pxn': pxn,
+            'pxn': pxn.pxn,
             'tsv': self.pxn.now(),
             'cid': self.pxn.cid(),
             'uid': self.uid(),
@@ -121,36 +119,37 @@ class InclineDatastore(object):
             'dat': dat
         }
 
-    def prepare(self, kid: str, pxn: str, met: InclineMeta,
+    def prepare(self, kid: str, pxn: InclinePxn, met: InclineMeta,
                 dat: dict[str, Any]) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.prepare") as span:
             self.map_request_span(request_args, span)
-            self.log.info('prepare %s pxn %s', kid, pxn)
+            self.log.info('prepare %s pxn %s', kid, format(pxn))
             val = self.prepare_val(kid, pxn, met, dat)
             return self.ds_prepare(kid, val)
 
     def commit(self,
                kid: str,
-               pxn: str,
+               pxn: InclinePxn,
                mode: str | None = None) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.commit") as span:
             self.map_request_span(request_args, span)
             # Read log entry
             log = self.only(self.ds_get_log(kid, pxn))
-            self.log.info('commit %s pxn %s org %s', kid, pxn, log['tsv'])
+            self.log.info('commit %s pxn %s org %s', kid, format(pxn),
+                          log['tsv'])
             return self.ds_commit(kid, log, mode=mode)
 
     def setup(self) -> None:
         with self.trace.span("incline.setup") as span:
             return self.ds_setup()
 
-    def genlog(self, kid: str, pxn: str, met: InclineMeta,
+    def genlog(self, kid: str, pxn: InclinePxn, met: InclineMeta,
                dat: dict[str, Any]) -> dict[str, Any]:
         log = {
             'kid': kid,
-            'pxn': pxn,
+            'pxn': pxn.pxn,
             'tsv': self.pxn.now(),
             'cid': self.pxn.cid(),
             'uid': self.uid(),
@@ -215,7 +214,7 @@ class InclineDatastore(object):
             if not m.loc:
                 m.loc = self.loc()
             if not m.pxn:
-                m.pxn = '0'
+                raise InclineInterface('metadata missing prepare txn')
             metadata.add_write(m)
         return metadata
 
@@ -453,7 +452,7 @@ class InclineDatastore(object):
 
     def ds_get_log(self,
                    kid: str,
-                   pxn: str | None = None) -> list[dict[str, Any]]:
+                   pxn: InclinePxn | None = None) -> list[dict[str, Any]]:
         return []
 
     def ds_get_txn(self,
@@ -484,7 +483,7 @@ class InclineDatastore(object):
                     limit: int | None = None) -> list[dict[str, Any]]:
         return []
 
-    def ds_delete_log(self, kid: str, pxn: str) -> None:
+    def ds_delete_log(self, kid: str, pxn: InclinePxn) -> None:
         pass
 
     def ds_delete_txn(self, kid: str, tsv: Decimal) -> None:

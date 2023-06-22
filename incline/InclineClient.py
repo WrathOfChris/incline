@@ -8,7 +8,8 @@ from incline.base62 import base_encode
 from incline.InclineDatastore import incline_resolve
 from incline.InclineDatastoreDynamo import InclineDatastoreDynamo
 from incline.InclineMeta import InclineMeta, InclineMetaWrite
-from incline.InclinePrepare import InclinePrepare
+from incline.InclinePrepare import InclinePrepare, InclinePxn
+from incline.InclineResponse import InclineResponse
 from incline.InclineTrace import InclineTrace
 from incline.router import InclineRouterOne
 from incline.error import InclineNotFound, InclineInterface
@@ -30,7 +31,7 @@ class InclineClient(object):
         """
         self.name = name
         self.region = region
-        self.pxn = InclinePrepare(cid=cid)
+        self.prepare = InclinePrepare(cid=cid)
         self.__uid = uid
         self.__rid = rid
         self.rtr = InclineRouterOne(name=self.name, region=self.region)
@@ -45,7 +46,7 @@ class InclineClient(object):
         self.log = logging.getLogger('incline.client.' + self.name)
         if not self.__log_configured():
             self.logfmt = 'i.client ({0}|{1}) rid={2} cid={3} uid={4} %(message)s'.format(
-                self.name, self.region, self.__rid, self.pxn.cid(), self.__uid)
+                self.name, self.region, self.__rid, self.prepare.cid(), self.__uid)
             handler = logging.StreamHandler(sys.stdout)
             formatter = logging.Formatter(self.logfmt)
             handler.setFormatter(formatter)
@@ -100,52 +101,53 @@ class InclineClient(object):
         for v in vals.values():
             for m in v['met']:
                 # 2.1 - Verify each val metadata older than other vals in set
-                if m['kid'] in vals and self.pxn.cmppxn(
-                        vals[m['kid']]['pxn'], m['pxn']) < 0:
-                    self.log.warn('get readatomic %s %s %s', m['kid'],
-                                  m['loc'], m['pxn'])
+                if m['kid'] in vals and (
+                        InclinePxn().loads(vals[m['kid']]['pxn']) <
+                        InclinePxn().loads(m['pxn'])):
+                    self.log.warning('get readatomic %s %s %s', m['kid'],
+                                     m['loc'], m['pxn'])
                     # 2.2 - GET from LOG any missing newer keys
                     vals[m['kid']] = self.getlog(m['kid'], m['loc'], m['pxn'])
 
         return vals
 
-    def put(self, kid: str, dat: dict[str, Any]) -> str:
+    def put(self, kid: str, dat: dict[str, Any]) -> InclineResponse:
         self.log.info('put %s', kid)
-        pxn = self.putatomic([{'kid': kid, 'dat': dat}])
-        return pxn
+        resp = self.putatomic([{'kid': kid, 'dat': dat}])
+        return resp
 
-    def puts(self, dat: list[dict[str, Any]]) -> str:
+    def puts(self, dat: list[dict[str, Any]]) -> InclineResponse:
         """
         [{'kid': kid, 'dat': dat}]
         """
         self.log.info('puts %d', len(dat))
-        pxn = self.putatomic(dat)
-        return pxn
+        resp = self.putatomic(dat)
+        return resp
 
     def search(self) -> None:
         pass
 
-    def create(self, kid: str, dat: dict[str, Any]) -> str:
+    def create(self, kid: str, dat: dict[str, Any]) -> InclineResponse:
         self.log.info('create %s', kid)
-        pxn = self.putatomic([{'kid': kid, 'dat': dat}], mode='create')
-        return pxn
+        resp = self.putatomic([{'kid': kid, 'dat': dat}], mode='create')
+        return resp
 
-    def creates(self, dat: list[dict[str, Any]]) -> str:
+    def creates(self, dat: list[dict[str, Any]]) -> InclineResponse:
         """
         [{'kid': kid, 'dat': dat}]
         """
         self.log.info('creates %s', len(dat))
-        pxn = self.putatomic(dat, mode='create')
-        return pxn
+        resp = self.putatomic(dat, mode='create')
+        return resp
 
-    def delete(self, kid: str) -> str:
+    def delete(self, kid: str) -> InclineResponse:
         """
         Delete creates with empty data, which causes a tombstone record to be
         created.  Reads filter tombstones earlier than now.
         """
         self.log.info('delete %s', kid)
-        pxn = self.putatomic([{'kid': kid, 'dat': None}], mode='delete')
-        return pxn
+        resp = self.putatomic([{'kid': kid, 'dat': None}], mode='delete')
+        return resp
 
     def getkey(self, key: str) -> dict[str, Any]:
         datastores = self.rtr.lookup('read', key)
@@ -160,8 +162,8 @@ class InclineClient(object):
             raise InclineNotFound('key not found in any datastore')
         return self.verify(vals)
 
-    def getlog(self, key: str, loc: str, pxn: str) -> dict[str, Any]:
-        self.log.info('getlog %s %s %s', key, loc, pxn)
+    def getlog(self, key: str, loc: str, pxn: InclinePxn) -> dict[str, Any]:
+        self.log.info('getlog %s %s %s', key, loc, format(pxn))
         vals = list()
         con = self.ds_open(loc)
         val = con.get(key, pxn=pxn)
@@ -173,13 +175,13 @@ class InclineClient(object):
 
     def putatomic(self,
                   dat: list[dict[str, Any]],
-                  mode: str | None = None) -> str:
+                  mode: str | None = None) -> InclineResponse:
         # TODO: check number ranges and data types (ex: dynamo decimal)
         datastores = list()
-        pxn = self.pxn.pxn()
+        pxn = self.prepare.pxn()
 
         for d in dat:
-            self.log.info('putatomic %s %s', d['kid'], pxn)
+            self.log.info('putatomic %s %s', d['kid'], format(pxn))
             # per-item datastore list
             d['datastores'] = self.rtr.lookup('write', d['kid'])
             datastores.extend(d['datastores'])
@@ -200,13 +202,14 @@ class InclineClient(object):
                 if ds in d['datastores']:
                     con.commit(d['kid'], pxn, mode=mode)
 
-        return pxn
+        # XXX TODO XXX add records and transaction data
+        return InclineResponse(pxn=pxn)
 
     def genmet(self,
                datastores: list[str],
                datastore: str,
                kid: str,
-               pxn: str,
+               pxn: InclinePxn,
                dat: list[dict[str, Any]] = []) -> InclineMeta:
         """
         Generate metadata
@@ -288,7 +291,7 @@ class InclineClient(object):
                                          trace=self.trace)
             con.rid(rid=self.__rid)
             con.uid(uid=self.__uid)
-            con.pxn.cid(cid=self.pxn.cid())
+            con.pxn.cid(self.prepare.cid())
         else:
             raise InclineInterface('unknown datastore in location string')
 

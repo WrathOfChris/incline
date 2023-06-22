@@ -1,4 +1,5 @@
 from incline.InclineDatastore import InclineDatastore
+from incline.InclinePrepare import InclinePxn
 from incline.InclineTrace import InclineTrace
 from incline.error import (InclineError, InclineExists, InclineDataError,
                            InclineNotFound, InclineInterface)
@@ -77,7 +78,7 @@ class InclineDatastoreDynamo(InclineDatastore):
 
     def ds_get_log(self,
                    kid: str,
-                   pxn: str | None = None) -> list[dict[str, Any]]:
+                   pxn: InclinePxn | None = None) -> list[dict[str, Any]]:
         request_args = locals()
         if not isinstance(kid, str):
             raise InclineInterface(f"key must be string not {type(kid)}")
@@ -87,9 +88,9 @@ class InclineDatastoreDynamo(InclineDatastore):
 
             kwargs = {}
             if pxn:
-                self.log.info('getlog %s pxn %s', kid, pxn)
+                self.log.info('getlog %s pxn %s', kid, format(pxn))
                 kwargs['KeyConditionExpression'] = Key('kid').eq(kid) & Key(
-                    'pxn').eq(pxn)
+                    'pxn').eq(pxn.pxn)
             else:
                 self.log.info('getlog %s', kid)
                 kwargs['KeyConditionExpression'] = Key('kid').eq(
@@ -360,7 +361,7 @@ class InclineDatastoreDynamo(InclineDatastore):
                 # XXX validate resp?  Count.  Items.
                 return txns
 
-    def ds_delete_log(self, kid: str, pxn: str) -> None:
+    def ds_delete_log(self, kid: str, pxn: InclinePxn) -> None:
         request_args = locals()
         if not isinstance(kid, str):
             raise InclineInterface(f"key must be string not {type(kid)}")
@@ -372,7 +373,7 @@ class InclineDatastoreDynamo(InclineDatastore):
                 try:
                     resp = self.logtbl.delete_item(Key={
                         'kid': kid,
-                        'pxn': pxn
+                        'pxn': pxn.pxn
                     },
                                                    ReturnValues='ALL_OLD')
                 except ClientError as e:
@@ -380,8 +381,9 @@ class InclineDatastoreDynamo(InclineDatastore):
 
                 if ('Attributes' not in resp
                         or resp['Attributes'].get('kid') != kid
-                        or resp['Attributes'].get('pxn') != pxn):
-                    raise InclineNotFound(f"cannot delete {kid} pxn {pxn}")
+                        or resp['Attributes'].get('pxn') != pxn.pxn):
+                    raise InclineNotFound(f"cannot delete {kid} " \
+                            f"pxn {format(pxn)}")
 
     def ds_delete_txn(self, kid: str, tsv: Decimal | int | str) -> None:
         request_args = locals()

@@ -2,6 +2,7 @@ import copy
 from decimal import Decimal
 from typing import Any
 from incline.InclineDatastore import InclineDatastore
+from incline.InclinePrepare import InclinePxn
 from incline.InclineTrace import InclineTrace
 from incline.error import (InclineError, InclineExists, InclineDataError,
                            InclineNotFound)
@@ -74,30 +75,9 @@ class InclineDatastoreMemory(InclineDatastore):
             DATASTORE_MEMORY[self.txnname] = dict()
         self.txndb = DATASTORE_MEMORY[self.txnname]
 
-    def cmppxn(self, pxn1: str, pxn2: str) -> int:
-        cid1 = pxn1.split('.')[0]
-        cnt1 = pxn1.split('.')[1]
-        cid2 = pxn2.split('.')[0]
-        cnt2 = pxn2.split('.')[1]
-
-        # Compare counter
-        if cnt1 < cnt2:
-            return -1
-        elif cnt1 > cnt2:
-            return 1
-
-        # Compare clientID
-        if cid1 < cid2:
-            return -1
-        elif cid1 > cid2:
-            return 1
-
-        # Same ClientID and Counter
-        return 0
-
     def ds_get_log(self,
                    kid: str,
-                   pxn: Any | None = None) -> list[dict[str, Any]]:
+                   pxn: InclinePxn | None = None) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.datastore.ds_get_log") as span:
             self.map_request_span(request_args, span)
@@ -105,12 +85,13 @@ class InclineDatastoreMemory(InclineDatastore):
             if not log:
                 return []
             if pxn:
-                self.log.info('getlog %s', kid)
+                self.log.info('getlog %s pxn %s', kid, format(pxn))
+                pxnstr = pxn.pxn
             else:
-                self.log.info('getlog %s pxn %s', kid, pxn)
+                self.log.info('getlog %s', kid)
                 # XXX max in prepare transaction id order (counter, client)
-                pxn = max((l.split('.')[1], l.split('.')[0]) for l in log)
-            local_resp = self.map_log_response(copy.deepcopy(log.get(pxn)))
+                pxnstr = max((l.split('.')[1], l.split('.')[0]) for l in log)
+            local_resp = self.map_log_response(copy.deepcopy(log.get(pxnstr)))
             self.map_response_span(local_resp, span)
             return local_resp
 
@@ -223,7 +204,7 @@ class InclineDatastoreMemory(InclineDatastore):
 
             return txns
 
-    def ds_delete_log(self, kid: str, pxn: str) -> None:
+    def ds_delete_log(self, kid: str, pxn: InclinePxn) -> None:
         request_args = locals()
         with self.trace.span("incline.datastore.ds_delete_log") as span:
             self.map_request_span(request_args, span)

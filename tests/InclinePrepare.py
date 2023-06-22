@@ -1,8 +1,9 @@
 import unittest
-import decimal
+from decimal import Decimal
 import time
 import uuid
 import incline.InclinePrepare
+from incline.base62 import base_encode
 
 pxn = incline.InclinePrepare.InclinePrepare()
 
@@ -10,17 +11,71 @@ pxn = incline.InclinePrepare.InclinePrepare()
 class TestInclinePrepare(unittest.TestCase):
     maxDiff = None
 
-    def test_pxn(self):
-        pass
+    def test_cid_just(self):
+        self.assertEqual(incline.InclinePrepare.INCLINE_TXN_CID_JUST,
+                         len(base_encode(2**48)))
 
-    def test_cmppxn(self):
-        pass
+    def test_cnt_just(self):
+        self.assertEqual(incline.InclinePrepare.INCLINE_TXN_CNT_JUST,
+                         len(base_encode(2**64)))
+
+    def test_pxn(self):
+        p = incline.InclinePrepare.InclinePxn(cid=0)
+        self.assertEqual(p.pxn, "000000000.00000000000")
+        self.assertEqual(p.pxn, str(p))
+        self.assertEqual(p.pxn, format(p))
+        self.assertEqual("InclinePxn(cnt=0, cid=0)", repr(p))
+
+        p2 = incline.InclinePrepare.InclinePxn()
+        cid = base_encode(incline.InclinePrepare.INCLINE_TXN_CLIENTID
+                          ).rjust(9, '0')
+        self.assertNotEqual(p2.pxn, "000000000.00000000000")
+        self.assertEqual(p2.pxn, f"{cid}.00000000000")
+
+    def test_pxn_order(self):
+        p0 = incline.InclinePrepare.InclinePxn(cid=0, cnt=10)
+        p1 = incline.InclinePrepare.InclinePxn(cid=0, cnt=20)
+        p2 = incline.InclinePrepare.InclinePxn(cid=100, cnt=10)
+        p3 = incline.InclinePrepare.InclinePxn(cid=100, cnt=20)
+        p4 = incline.InclinePrepare.InclinePxn(cid=200, cnt=10)
+        p5 = incline.InclinePrepare.InclinePxn(cid=0, cnt=10)
+
+        # cid & cnt equal
+        self.assertEqual(p0, p5)
+
+        # cnt greater
+        self.assertGreater(p1, p0)
+        self.assertGreater(p1, p2)
+
+        # cid greater, same cnt
+        self.assertGreater(p4, p2)
+        self.assertGreater(p3, p4)
+
+    def test_pxn_loads(self):
+        p1 = incline.InclinePrepare.InclinePxn().loads("000000000.00000000000")
+        self.assertEqual(p1.cid, 0)
+        self.assertEqual(p1.cnt, 0)
+
+        p2 = incline.InclinePrepare.InclinePxn().loads("0ryIfPzwQ.00000000000")
+        self.assertEqual(p2.cid, 190070690681122)
+        self.assertEqual(p2.cnt, 0)
 
     def test_cid(self):
-        self.assertEqual(pxn.cid(), incline.base62.base_encode(uuid.getnode()))
+        self.assertEqual(pxn.cid(), base_encode(uuid.getnode()).rjust(9, '0'))
 
     def test_cnt(self):
         pass
+
+    def test_quantize(self):
+        self.assertEqual(incline.InclinePrepare.INCLINE_TXN_QUANTIZE,
+                         "1.000000")
+
+    def test_monotize(self):
+        self.assertEqual(incline.InclinePrepare.INCLINE_TXN_MONOTIZE,
+                         "0.000001")
+        self.assertEqual(
+                Decimal(incline.InclinePrepare.INCLINE_TXN_MONOTIZE) * 1000000,
+                Decimal(incline.InclinePrepare.INCLINE_TXN_QUANTIZE))
 
     def test_now(self):
         """ Same tests as Datastore """
@@ -28,7 +83,7 @@ class TestInclinePrepare(unittest.TestCase):
         now2 = pxn.now()
         now_time = time.time()
 
-        self.assertIsInstance(now, decimal.Decimal)
+        self.assertIsInstance(now, Decimal)
 
         self.assertNotEqual(now, 0)
         self.assertNotEqual(now, now2)
@@ -38,12 +93,12 @@ class TestInclinePrepare(unittest.TestCase):
         self.assertGreater(now_time, now)
 
         # called later, must be greater
-        now3 = decimal.Decimal(time.time_ns()) / 1000000000
+        now3 = Decimal(time.time_ns()) / 1000000000
         self.assertGreater(now3, now)
 
     def test_decimal(self):
         """ Same tests as Datastore """
-        self.assertIsInstance(pxn.decimal(int(1)), decimal.Decimal)
+        self.assertIsInstance(pxn.decimal(int(1)), Decimal)
 
         (s, d, e) = pxn.decimal(1).as_tuple()
         self.assertEqual(abs(e), 6)
@@ -51,17 +106,17 @@ class TestInclinePrepare(unittest.TestCase):
         v = pxn.decimal("1.0000000001")
         (s, d, e) = v.as_tuple()
         self.assertEqual(abs(e), 6)
-        self.assertEqual(v, decimal.Decimal("1.000000"))
+        self.assertEqual(v, Decimal("1.000000"))
 
         v = pxn.decimal("1.0000000000001")
         (s, d, e) = v.as_tuple()
         self.assertEqual(abs(e), 6)
-        self.assertEqual(v, decimal.Decimal("1.000000"))
+        self.assertEqual(v, Decimal("1.000000"))
 
         v = pxn.decimal("1.1")
         (s, d, e) = v.as_tuple()
         self.assertEqual(abs(e), 6)
-        self.assertEqual(v, decimal.Decimal("1.100000"))
+        self.assertEqual(v, Decimal("1.100000"))
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+from incline.InclinePrepare import InclinePxn
 
 @dataclass
 class InclineMetaWrite:
@@ -9,10 +10,10 @@ class InclineMetaWrite:
     """
     kid: str
     loc: str
-    pxn: str = '0'
+    pxn: InclinePxn = field(default_factory=InclinePxn)
 
     def to_dict(self) -> dict[str, str]:
-        return {'kid': self.kid, 'loc': self.loc, 'pxn': self.pxn}
+        return asdict(self)
 
 
 @dataclass
@@ -25,11 +26,8 @@ class InclineMeta:
     def add_write(self, write: InclineMetaWrite) -> None:
         self.meta.append(write)
 
-    def to_dict(self) -> list[dict[str, str]]:
+    def to_dict(self) -> dict[str, str]:
         """
-        Yes, this returns a list instead of a dict. Ugh.
+        Ok, this really returns a list
         """
-        l: list[dict[str, str]] = []
-        for m in self.meta:
-            l.append(m.to_dict())
-        return l
+        return list(asdict(self)['meta'])

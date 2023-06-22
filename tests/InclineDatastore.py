@@ -5,6 +5,7 @@ import time
 import uuid
 import incline.InclineDatastore
 import incline.InclineClient
+from incline.InclinePrepare import InclinePxn
 from incline.InclineTraceConsole import InclineTraceConsole
 from incline.error import InclineNotFound
 
@@ -32,9 +33,9 @@ class InclineDatastoreTest(incline.InclineDatastore.InclineDatastore):
             return []
         if not pxn:
             pxn = max(logs)
-        log = logs.get(pxn)
+        log = logs.get(pxn.pxn)
         if not log:
-            raise ValueError(f"{kid} {pxn} not found")
+            raise ValueError(f"{kid} {format(pxn)} not found")
         return [log]
 
     def ds_get_txn(self, kid, tsv=None, limit=1):
@@ -88,11 +89,11 @@ class InclineDatastoreTest(incline.InclineDatastore.InclineDatastore):
 
     def ds_setup(self):
         kid = f"{TEST_PREFIX}-prepare"
-        pxn = "00000000.00000000000"
+        pxn = InclinePxn(cid=0, cnt=0)
         self.store_log = {}
         log = {
             'kid': kid,
-            'pxn': pxn,
+            'pxn': pxn.pxn,
             'tsv': self.pxn.now(),
             'cid': self.pxn.cid(),
             'uid': self.uid(),
@@ -102,7 +103,7 @@ class InclineDatastoreTest(incline.InclineDatastore.InclineDatastore):
             'dat': "test fixture",
         }
         self.store_log[kid] = {}
-        self.store_log[kid][pxn] = log
+        self.store_log[kid][pxn.pxn] = log
 
         self.store_txn = {}
         kid = f"{TEST_PREFIX}-commit"
@@ -110,7 +111,7 @@ class InclineDatastoreTest(incline.InclineDatastore.InclineDatastore):
         txn = {
             'kid': kid,
             'tsv': tsv,
-            'pxn': pxn,
+            'pxn': pxn.pxn,
             'tmb': False,
             'cid': self.pxn.cid(),
             'uid': self.uid(),
@@ -151,7 +152,7 @@ class TestDatastore(unittest.TestCase):
     def test_004_fixtures(self):
         """ bypass datastore prepare() """
         kid = f"{TEST_PREFIX}-log-key-no-pxn"
-        pxn = ramp.pxn.pxn()
+        pxn = ramp.prepare.pxn()
         dat = [{'kid': kid, 'dat': kid}]
         met = ramp.genmet([], None, kid, pxn, dat)
         val = self.ds.prepare_val(kid, pxn, met, dat)
@@ -224,12 +225,12 @@ class TestDatastore(unittest.TestCase):
 
     def test_prepare_val(self):
         kid = f"{TEST_PREFIX}-prepare"
-        pxn = ramp.pxn.pxn()
+        pxn = ramp.prepare.pxn()
         dat = [{'kid': kid, 'dat': kid}]
         met = ramp.genmet([], None, kid, pxn, dat)
         p = self.ds.prepare_val(kid, pxn, met, dat)
         self.assertEqual(p['kid'], kid)
-        self.assertEqual(p['pxn'], pxn)
+        self.assertEqual(p['pxn'], pxn.pxn)
         self.assertEqual(p['cid'], self.ds.pxn.cid())
         self.assertEqual(p['dat'], dat)
         self.assertEqual(p['met'], met.to_dict())
@@ -239,7 +240,7 @@ class TestDatastore(unittest.TestCase):
         self.assertGreater(self.ds.pxn.now(), p['tsv'])
 
     def fixture(self, kid, dat=None):
-        pxn = ramp.pxn.pxn()
+        pxn = ramp.prepare.pxn()
         met = ramp.genmet([], None, kid, pxn, dat)
         prepare = self.ds.prepare(kid, pxn, met, dat)
         commit = self.ds.commit(kid, pxn)
@@ -247,7 +248,7 @@ class TestDatastore(unittest.TestCase):
 
     def test_prepare_commit_1(self):
         kid = f"{TEST_PREFIX}-prepare-commit"
-        pxn = ramp.pxn.pxn()
+        pxn = ramp.prepare.pxn()
         # store value for next test
         self.__class__.test_prepare_commit_pxn = pxn
         dat = [{'kid': kid, 'dat': kid}]
@@ -255,7 +256,7 @@ class TestDatastore(unittest.TestCase):
         prepare = self.ds.prepare(kid, pxn, met, dat)
         p = self.ds.only(prepare)
         self.assertEqual(p['kid'], kid)
-        self.assertEqual(p['pxn'], pxn)
+        self.assertEqual(p['pxn'], pxn.pxn)
         self.assertEqual(p['cid'], self.ds.pxn.cid())
         self.assertEqual(p['met'], met.to_dict())
         self.assertEqual(p['rid'], self.ds.rid())
@@ -272,7 +273,7 @@ class TestDatastore(unittest.TestCase):
         commit = self.ds.commit(kid, pxn)
         c = self.ds.only(commit)
         self.assertEqual(c['kid'], kid)
-        self.assertEqual(c['pxn'], pxn)
+        self.assertEqual(c['pxn'], pxn.pxn)
         self.assertEqual(c['cid'], self.ds.pxn.cid())
         self.assertEqual(c['met'], [])
         self.assertEqual(c['rid'], self.ds.rid())

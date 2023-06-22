@@ -3,6 +3,7 @@ import decimal
 import logging
 
 import incline.InclineClient
+from incline.InclinePrepare import InclinePxn
 from incline.InclineTraceConsole import InclineTraceConsole
 import incline.InclineTraceConsole
 from incline.error import InclineExists, InclineNotFound
@@ -27,7 +28,7 @@ class TestInclineClient(unittest.TestCase):
             uid='00000000-0000-0000-0000-000000000000')
 
         # fixtures
-        cls.tsv = cls.ramp.pxn.now()
+        cls.tsv = cls.ramp.prepare.now()
 
         # opentelemetry traces to console
         if __name__ == "__main__":
@@ -62,13 +63,13 @@ class TestInclineClient(unittest.TestCase):
 
     def test_create_delete_create(self):
         kid = f"{TEST_PREFIX}-create-delete-create-{self.tsv}"
-        pxn = self.ramp.create(kid, kid)
-        self.assertNotEqual(pxn, "")
-        pxn = self.ramp.delete(kid)
-        self.assertNotEqual(pxn, "")
-        pxn = self.ramp.create(kid, kid)
-        self.assertNotEqual(pxn,
-                            "",
+        resp = self.ramp.create(kid, kid)
+        self.assertNotEqual(resp.pxn, InclinePxn())
+        resp = self.ramp.delete(kid)
+        self.assertNotEqual(resp.pxn, InclinePxn())
+        resp = self.ramp.create(kid, kid)
+        self.assertNotEqual(resp.pxn,
+                            InclinePxn(),
                             msg="key should not exist after previous delete")
 
     def test_creates(self):
