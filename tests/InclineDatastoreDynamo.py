@@ -3,7 +3,7 @@ from incline.InclineDatastoreDynamo import InclineDatastoreDynamo
 from incline.InclineTraceConsole import InclineTraceConsole
 from InclineDatastore import TestDatastore
 import logging
-import decimal
+from typing import Any
 import sys
 import botocore
 

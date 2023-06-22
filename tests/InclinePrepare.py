@@ -101,21 +101,25 @@ class TestInclinePrepare(unittest.TestCase):
         self.assertIsInstance(pxn.decimal(int(1)), Decimal)
 
         (s, d, e) = pxn.decimal(1).as_tuple()
-        self.assertEqual(abs(e), 6)
+        self.assertNotIn(e, ['n', 'N', 'F'])
+        self.assertEqual(abs(int(e)), 6)
 
         v = pxn.decimal("1.0000000001")
         (s, d, e) = v.as_tuple()
-        self.assertEqual(abs(e), 6)
+        self.assertNotIn(e, ['n', 'N', 'F'])
+        self.assertEqual(abs(int(e)), 6)
         self.assertEqual(v, Decimal("1.000000"))
 
         v = pxn.decimal("1.0000000000001")
         (s, d, e) = v.as_tuple()
-        self.assertEqual(abs(e), 6)
+        self.assertNotIn(e, ['n', 'N', 'F'])
+        self.assertEqual(abs(int(e)), 6)
         self.assertEqual(v, Decimal("1.000000"))
 
         v = pxn.decimal("1.1")
         (s, d, e) = v.as_tuple()
-        self.assertEqual(abs(e), 6)
+        self.assertNotIn(e, ['n', 'N', 'F'])
+        self.assertEqual(abs(int(e)), 6)
         self.assertEqual(v, Decimal("1.100000"))
 
 

@@ -1,5 +1,5 @@
 import unittest
-import decimal
+from decimal import Decimal
 import logging
 
 import incline.InclineClient
@@ -18,6 +18,8 @@ TEST_PREFIX = "test-InclineClient"
 
 class TestInclineClient(unittest.TestCase):
     maxDiff = None
+    ramp: incline.InclineClient.InclineClient
+    tsv: Decimal
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -56,18 +58,20 @@ class TestInclineClient(unittest.TestCase):
 
     def test_create_twice(self) -> None:
         kid = f"{TEST_PREFIX}-create-twice-{self.tsv}"
-        pxn = self.ramp.create(kid, kid)
-        self.assertNotEqual(pxn, "")
+        dat = {'key': kid}
+        resp = self.ramp.create(kid, dat)
+        self.assertNotEqual(resp.pxn, InclinePxn())
         with self.assertRaises(InclineExists):
-            pxn = self.ramp.create(kid, kid)
+            resp = self.ramp.create(kid, dat)
 
     def test_create_delete_create(self) -> None:
         kid = f"{TEST_PREFIX}-create-delete-create-{self.tsv}"
-        resp = self.ramp.create(kid, kid)
+        dat = {'key': kid}
+        resp = self.ramp.create(kid, dat)
         self.assertNotEqual(resp.pxn, InclinePxn())
         resp = self.ramp.delete(kid)
         self.assertNotEqual(resp.pxn, InclinePxn())
-        resp = self.ramp.create(kid, kid)
+        resp = self.ramp.create(kid, dat)
         self.assertNotEqual(resp.pxn,
                             InclinePxn(),
                             msg="key should not exist after previous delete")
@@ -75,12 +79,13 @@ class TestInclineClient(unittest.TestCase):
     def test_creates(self) -> None:
         pass
 
-    def test_delete(self):
+    def test_delete(self) -> None:
         kid = f"{TEST_PREFIX}-delete"
-        pxn = self.ramp.create(kid, kid)
-        self.assertNotEqual(pxn, "")
-        pxn = self.ramp.delete(kid)
-        self.assertNotEqual(pxn, "")
+        dat = {'key': kid}
+        resp = self.ramp.create(kid, dat)
+        self.assertNotEqual(resp.pxn, InclinePxn())
+        resp = self.ramp.delete(kid)
+        self.assertNotEqual(resp.pxn, InclinePxn())
         with self.assertRaises(InclineNotFound):
             items = self.ramp.get(kid)
 
@@ -120,20 +125,23 @@ class TestInclineClient(unittest.TestCase):
     def test_putget_2(self) -> None:
         self.assertEqual(
             dict(value=self.tsv),
-            self.ramp.get(f"{TEST_PREFIX}-putget").get(
-                f"{TEST_PREFIX}-putget").get('dat'))
+            self.ramp.get(f"{TEST_PREFIX}-putget").get(f"{TEST_PREFIX}-putget",
+                                                       {}).get('dat'))
 
     def test_type_string(self) -> None:
         self.assertIsNotNone(
-            self.ramp.put(f"{TEST_PREFIX}-type-string", str("hello")))
+            self.ramp.put(f"{TEST_PREFIX}-type-string",
+                          str("hello")))    # type: ignore
 
     def test_type_integer(self) -> None:
         self.assertIsNotNone(
-            self.ramp.put(f"{TEST_PREFIX}-type-integer", int(42)))
+            self.ramp.put(f"{TEST_PREFIX}-type-integer",
+                          int(42)))    # type: ignore
 
     def test_type_float(self) -> None:
         self.assertIsNotNone(
-            self.ramp.put(f"{TEST_PREFIX}-type-float", float(42.424242)))
+            self.ramp.put(f"{TEST_PREFIX}-type-float",
+                          float(42.424242)))    # type: ignore
 
     def test_type_dict(self) -> None:
         self.assertIsNotNone(
@@ -141,7 +149,8 @@ class TestInclineClient(unittest.TestCase):
 
     def test_type_list(self) -> None:
         self.assertIsNotNone(
-            self.ramp.put(f"{TEST_PREFIX}-type-list", list("abcdef")))
+            self.ramp.put(f"{TEST_PREFIX}-type-list",
+                          list("abcdef")))    # type: ignore
 
     def test_type_decimal(self) -> None:
         DECIMAL_VALUES = [
@@ -160,11 +169,12 @@ class TestInclineClient(unittest.TestCase):
             -10**38 + 1    # dynamodb minimum size, 38 digits
         ]
         for d in DECIMAL_VALUES:
-            self.ramp.put(f"{TEST_PREFIX}-type-decimal", decimal.Decimal(d))
+            self.ramp.put(f"{TEST_PREFIX}-type-decimal",
+                          Decimal(d))    # type: ignore
             self.assertEqual(
-                decimal.Decimal(d),
+                Decimal(d),    # type: ignore
                 self.ramp.get(f"{TEST_PREFIX}-type-decimal").get(
-                    f"{TEST_PREFIX}-type-decimal").get('dat'))
+                    f"{TEST_PREFIX}-type-decimal", {}).get('dat'))
 
 
 if __name__ == "__main__":

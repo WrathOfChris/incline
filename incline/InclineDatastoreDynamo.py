@@ -10,6 +10,7 @@ from typing import Any
 import botocore.config
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key, Attr
+from boto3.dynamodb.types import TypeDeserializer
 
 # OpenTelemetry Instrumenting
 from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
@@ -157,7 +158,8 @@ class InclineDatastoreDynamo(InclineDatastore):
             self.map_response_span(local_resp, span)
             return local_resp
 
-    def ds_prepare(self, kid: str, val: Any) -> list[dict[str, Any]]:
+    def ds_prepare(self, kid: str, val: dict[str,
+                                             Any]) -> list[dict[str, Any]]:
         request_args = locals()
         # XXX validate resp?
         # XXX ReturnValues - ALL_OLD returns prev values
@@ -433,7 +435,7 @@ class InclineDatastoreDynamo(InclineDatastore):
         Pagination comes from DynamoDB.Client which is a low-level client.
         Use the internal boto3 deserializer that Table() uses
         """
-        deserializer = boto3.dynamodb.types.TypeDeserializer()  # type: ignore
+        deserializer = TypeDeserializer()
 
         results = list()
         for r in resp['Items']:
@@ -453,7 +455,7 @@ class InclineDatastoreDynamo(InclineDatastore):
         Pagination comes from DynamoDB.Client which is a low-level client.
         Use the internal boto3 deserializer that Table() uses
         """
-        deserializer = boto3.dynamodb.types.TypeDeserializer()  # type: ignore
+        deserializer = TypeDeserializer()
 
         results = list()
         for r in resp['Items']:

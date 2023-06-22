@@ -12,11 +12,15 @@ class TestInclineMeta(unittest.TestCase):
 
     def test_meta_to_dict(self) -> None:
         meta = InclineMeta()
-        write = InclineMetaWrite("1", "", "")
+        write = InclineMetaWrite("1", "", InclinePxn(cid=0))
         meta.add_write(write)
 
         metadict = meta.to_dict()
-        self.assertEqual(metadict, [{'kid': '1', 'loc': '', 'pxn': ''}])
+        self.assertEqual(metadict, [{
+            'kid': '1',
+            'loc': '',
+            'pxn': '000000000.00000000000'
+        }])
 
     def test_metawrite(self) -> None:
         write = InclineMetaWrite("1", "2")
@@ -25,13 +29,17 @@ class TestInclineMeta(unittest.TestCase):
         self.assertEqual(write.pxn, InclinePxn())
 
     def test_metawrite_all(self) -> None:
-        write = InclineMetaWrite("1", "2", "3")
+        write = InclineMetaWrite("1", "2", InclinePxn(cid=3))
         self.assertEqual(write.kid, "1")
         self.assertEqual(write.loc, "2")
-        self.assertEqual(write.pxn, "3")
+        self.assertEqual(write.pxn, InclinePxn(cid=3))
 
     def test_metawrite_to_dict(self) -> None:
-        write = InclineMetaWrite("1", "2", "3")
+        write = InclineMetaWrite("1", "2", InclinePxn(cid=3))
 
         writedict = write.to_dict()
-        self.assertEqual(writedict, {'kid': '1', 'loc': '2', 'pxn': '3'})
+        self.assertEqual(writedict, {
+            'kid': '1',
+            'loc': '2',
+            'pxn': '000000003.00000000000'
+        })

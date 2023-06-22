@@ -146,7 +146,7 @@ class InclineClient(object):
         created.  Reads filter tombstones earlier than now.
         """
         self.log.info('delete %s', kid)
-        resp = self.putatomic([{'kid': kid, 'dat': None}], mode='delete')
+        resp = self.putatomic([{'kid': kid, 'dat': {}}], mode='delete')
         return resp
 
     def getkey(self, key: str) -> dict[str, Any]:

@@ -90,8 +90,8 @@ class InclineDatastoreMemory(InclineDatastore):
             else:
                 self.log.info('getlog %s', kid)
                 # XXX max in prepare transaction id order (counter, client)
-                pxnstr = str(max((l.split('.')[1],
-                                  l.split('.')[0]) for l in log))
+                pxnstr = str(
+                    max((l.split('.')[1], l.split('.')[0]) for l in log))
             local_resp = self.map_log_response(copy.deepcopy(log.get(pxnstr)))
             self.map_response_span(local_resp, span)
             return local_resp
@@ -121,7 +121,8 @@ class InclineDatastoreMemory(InclineDatastore):
             self.map_response_span(local_resp, span)
             return local_resp
 
-    def ds_prepare(self, kid: str, val: Any) -> list[dict[str, Any]]:
+    def ds_prepare(self, kid: str, val: dict[str,
+                                             Any]) -> list[dict[str, Any]]:
         request_args = locals()
         with self.trace.span("incline.datastore.ds_prepare") as span:
             self.map_request_span(request_args, span)
@@ -212,9 +213,9 @@ class InclineDatastoreMemory(InclineDatastore):
 
             if kid not in self.logdb:
                 return
-            if pxn not in self.logdb[kid]:
+            if pxn.pxn not in self.logdb[kid]:
                 return
-            del self.logdb[kid][pxn]
+            del self.logdb[kid][pxn.pxn]
             if not self.logdb[kid]:
                 del self.logdb[kid]
 

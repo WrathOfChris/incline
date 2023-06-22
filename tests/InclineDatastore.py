@@ -1,7 +1,8 @@
 import unittest
-import decimal
+from decimal import Decimal
 import logging
 import time
+from typing import Any, Type
 import uuid
 import incline.InclineDatastore
 import incline.InclineClient
@@ -22,7 +23,7 @@ class InclineDatastoreTest(incline.InclineDatastore.InclineDatastore):
     Override datastore methods with test fixtures
     """
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         # permit individual tests to be run by setting up store_log/store_txn
         super().__init__(*args, **kwargs)
         self.ds_setup()
@@ -34,7 +35,7 @@ class InclineDatastoreTest(incline.InclineDatastore.InclineDatastore):
         if not logs:
             return []
         if not pxn:
-            pxn = max(logs)
+            pxn = InclinePxn().loads(max(logs))
         log = logs.get(pxn.pxn)
         if not log:
             raise ValueError(f"{kid} {format(pxn)} not found")
@@ -93,7 +94,7 @@ class InclineDatastoreTest(incline.InclineDatastore.InclineDatastore):
         return txns
 
     def ds_delete_log(self, kid: str, pxn: InclinePxn) -> None:
-        del self.store_log[kid][pxn]
+        del self.store_log[kid][pxn.pxn]
         if not self.store_log[kid]:
             del self.store_log[kid]
 
@@ -105,7 +106,7 @@ class InclineDatastoreTest(incline.InclineDatastore.InclineDatastore):
     def ds_setup(self) -> None:
         kid = f"{TEST_PREFIX}-prepare"
         pxn = InclinePxn(cid=0, cnt=0)
-        self.store_log = {}
+        self.store_log: dict[str, Any] = {}
         log = {
             'kid': kid,
             'pxn': pxn.pxn,
@@ -120,7 +121,7 @@ class InclineDatastoreTest(incline.InclineDatastore.InclineDatastore):
         self.store_log[kid] = {}
         self.store_log[kid][pxn.pxn] = log
 
-        self.store_txn = {}
+        self.store_txn: dict[str, Any] = {}
         kid = f"{TEST_PREFIX}-commit"
         tsv = self.pxn.now()
         txn = {
@@ -149,6 +150,8 @@ ramp = incline.InclineClient.InclineClient(
 
 class TestDatastore(unittest.TestCase):
     maxDiff = None
+    ds: incline.InclineDatastore.InclineDatastore
+    test_prepare_commit_pxn: InclinePxn
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -168,8 +171,8 @@ class TestDatastore(unittest.TestCase):
         """ bypass datastore prepare() """
         kid = f"{TEST_PREFIX}-log-key-no-pxn"
         pxn = ramp.prepare.pxn()
-        dat = [{'kid': kid, 'dat': kid}]
-        met = ramp.genmet([], None, kid, pxn, dat)
+        dat = {'kid': kid, 'dat': kid}
+        met = ramp.genmet([], "", kid, pxn, [dat])
         val = self.ds.prepare_val(kid, pxn, met, dat)
         resp = self.ds.ds_prepare(kid, val)
 
@@ -180,7 +183,7 @@ class TestDatastore(unittest.TestCase):
 
         if logs:
             for l in logs:
-                self.ds.ds_delete_log(l['kid'], l['pxn'])
+                self.ds.ds_delete_log(l['kid'], InclinePxn().loads(l['pxn']))
 
         logs = self.ds.ds_scan_log()
         self.assertEqual(logs, [])
@@ -205,44 +208,37 @@ class TestDatastore(unittest.TestCase):
 
     def test_numbers_to_remote_values(self) -> None:
         self.assertIsInstance(self.ds.numbers_to_remote(int(1)), int)
-        self.assertIsInstance(self.ds.numbers_to_remote(float(1.0)),
-                              decimal.Decimal)
+        self.assertIsInstance(self.ds.numbers_to_remote(float(1.0)), Decimal)
 
     def test_numbers_to_remote_list(self) -> None:
         v = self.ds.numbers_to_remote([int(1), float(1.0)])
         self.assertIsInstance(v[0], int)
-        self.assertIsInstance(v[1], decimal.Decimal)
+        self.assertIsInstance(v[1], Decimal)
 
     def test_numbers_to_remote_dict(self) -> None:
         v = self.ds.numbers_to_remote({'i': int(1), 'f': float(1.0)})
         self.assertIsInstance(v['i'], int)
-        self.assertIsInstance(v['f'], decimal.Decimal)
+        self.assertIsInstance(v['f'], Decimal)
 
     def test_numbers_to_local_values(self) -> None:
-        self.assertIsInstance(self.ds.numbers_to_local(decimal.Decimal(1)),
-                              int)
-        self.assertIsInstance(self.ds.numbers_to_local(decimal.Decimal("1.0")),
-                              float)
+        self.assertIsInstance(self.ds.numbers_to_local(Decimal(1)), int)
+        self.assertIsInstance(self.ds.numbers_to_local(Decimal("1.0")), float)
 
     def test_numbers_to_local_list(self) -> None:
-        v = self.ds.numbers_to_local(
-            [decimal.Decimal(1), decimal.Decimal("1.0")])
+        v = self.ds.numbers_to_local([Decimal(1), Decimal("1.0")])
         self.assertIsInstance(v[0], int)
         self.assertIsInstance(v[1], float)
 
     def test_numbers_to_local_dict(self) -> None:
-        v = self.ds.numbers_to_local({
-            'i': decimal.Decimal(1),
-            'f': decimal.Decimal("1.0")
-        })
+        v = self.ds.numbers_to_local({'i': Decimal(1), 'f': Decimal("1.0")})
         self.assertIsInstance(v['i'], int)
         self.assertIsInstance(v['f'], float)
 
     def test_prepare_val(self) -> None:
         kid = f"{TEST_PREFIX}-prepare"
         pxn = ramp.prepare.pxn()
-        dat = [{'kid': kid, 'dat': kid}]
-        met = ramp.genmet([], None, kid, pxn, dat)
+        dat = {'kid': kid, 'dat': kid}
+        met = ramp.genmet([], "", kid, pxn, [dat])
         p = self.ds.prepare_val(kid, pxn, met, dat)
         self.assertEqual(p['kid'], kid)
         self.assertEqual(p['pxn'], pxn.pxn)
@@ -251,12 +247,19 @@ class TestDatastore(unittest.TestCase):
         self.assertEqual(p['met'], met.to_dict())
         self.assertEqual(p['rid'], self.ds.rid())
         self.assertEqual(p['uid'], self.ds.uid())
-        self.assertIsInstance(p['tsv'], decimal.Decimal)
+        self.assertIsInstance(p['tsv'], Decimal)
         self.assertGreater(self.ds.pxn.now(), p['tsv'])
 
-    def fixture(self, kid, dat=None) -> None:
+    def fixture(self,
+                kid: str,
+                dat: dict[str, Any] | None = None) -> list[dict[str, Any]]:
         pxn = ramp.prepare.pxn()
-        met = ramp.genmet([], None, kid, pxn, dat)
+        datseq = []
+        if dat:
+            datseq.append(dat)
+        else:
+            dat = {}
+        met = ramp.genmet([], "", kid, pxn, datseq)
         prepare = self.ds.prepare(kid, pxn, met, dat)
         commit = self.ds.commit(kid, pxn)
         return commit
@@ -266,8 +269,8 @@ class TestDatastore(unittest.TestCase):
         pxn = ramp.prepare.pxn()
         # store value for next test
         self.__class__.test_prepare_commit_pxn = pxn
-        dat = [{'kid': kid, 'dat': kid}]
-        met = ramp.genmet([], None, kid, pxn, dat)
+        dat = {'kid': kid, 'dat': kid}
+        met = ramp.genmet([], "", kid, pxn, [dat])
         prepare = self.ds.prepare(kid, pxn, met, dat)
         p = self.ds.only(prepare)
         self.assertEqual(p['kid'], kid)
@@ -276,7 +279,7 @@ class TestDatastore(unittest.TestCase):
         self.assertEqual(p['met'], met.to_dict())
         self.assertEqual(p['rid'], self.ds.rid())
         self.assertEqual(p['uid'], self.ds.uid())
-        self.assertIsInstance(p['tsv'], decimal.Decimal)
+        self.assertIsInstance(p['tsv'], Decimal)
         self.assertGreater(self.ds.pxn.now(), p['tsv'])
         self.assertEqual(p['dat'], dat)
         self.assertEqual(p['ver'], self.ds.version)
@@ -293,9 +296,9 @@ class TestDatastore(unittest.TestCase):
         self.assertEqual(c['met'], [])
         self.assertEqual(c['rid'], self.ds.rid())
         self.assertEqual(c['uid'], self.ds.uid())
-        self.assertIsInstance(c['tsv'], decimal.Decimal)
+        self.assertIsInstance(c['tsv'], Decimal)
         self.assertGreater(self.ds.pxn.now(), c['tsv'])
-        self.assertEqual(c['dat'], [{'kid': kid, 'dat': kid}])
+        self.assertEqual(c['dat'], {'kid': kid, 'dat': kid})
         self.assertFalse(c['tmb'])
         self.assertEqual(c['ver'], self.ds.version)
 
@@ -310,7 +313,7 @@ class TestDatastore(unittest.TestCase):
 
     def test_ds_get_txn_txn_notfound(self) -> None:
         kid = f"{TEST_PREFIX}-never-store-this"
-        resp = self.ds.ds_get_txn(kid, tsv=42)
+        resp = self.ds.ds_get_txn(kid, tsv=Decimal(42))
         self.assertEqual(resp, [])
 
     def test_delete_tombstone(self) -> None:
@@ -318,7 +321,7 @@ class TestDatastore(unittest.TestCase):
         fix = self.ds.only(self.fixture(kid, None))
         resp = self.ds.only(self.ds.ds_get_txn(kid, tsv=fix['tsv']))
         self.assertGreater(resp['tmb'], 0)
-        self.assertEqual(resp['dat'], None)
+        self.assertEqual(resp['dat'], {})
 
     def test_prepare_commit_create(self) -> None:
         pass

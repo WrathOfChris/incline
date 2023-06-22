@@ -14,7 +14,7 @@ class InclineMetaWrite:
     pxn: InclinePxn = field(default_factory=InclinePxn)
 
     def to_dict(self) -> dict[str, str]:
-        return asdict(self)
+        return {'kid': self.kid, 'loc': self.loc, 'pxn': self.pxn.pxn}
 
 
 @dataclass
@@ -31,4 +31,7 @@ class InclineMeta:
         """
         Ok, this really returns a list
         """
-        return list(asdict(self)['meta'])
+        out: list[dict[str, str]] = []
+        for m in self.meta:
+            out.append(m.to_dict())
+        return out

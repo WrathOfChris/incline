@@ -23,8 +23,9 @@ class TestBase62(unittest.TestCase):
 
     def test_base_float(self) -> None:
         with self.assertRaises(ValueError):
-            incline.base62.base_encode(float('inf'))
-        self.assertEqual('0', incline.base62.base_encode(float('-inf')))
+            incline.base62.base_encode(float('inf'))    # type: ignore
+        self.assertEqual('0', incline.base62.base_encode(
+            float('-inf')))    # type: ignore
 
     def test_base_range_maxsize(self) -> None:
         MAXSIZES = [

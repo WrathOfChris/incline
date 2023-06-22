@@ -165,7 +165,7 @@ class InclineDatastore(object):
         tsv: Decimal | int = Decimal(0)) -> dict[str, Any]:
         # Set tombstone when empty data
         tmb = Decimal(0)
-        if log['dat'] is None:
+        if log['dat'] is None or log['dat'] == {}:
             tmb = self.pxn.decimal(log['tsv'])
 
         txn = {
