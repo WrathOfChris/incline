@@ -90,7 +90,8 @@ class InclineDatastoreMemory(InclineDatastore):
             else:
                 self.log.info('getlog %s', kid)
                 # XXX max in prepare transaction id order (counter, client)
-                pxnstr = max((l.split('.')[1], l.split('.')[0]) for l in log)
+                pxnstr = str(max((l.split('.')[1],
+                                  l.split('.')[0]) for l in log))
             local_resp = self.map_log_response(copy.deepcopy(log.get(pxnstr)))
             self.map_response_span(local_resp, span)
             return local_resp

@@ -5,16 +5,16 @@ from incline.flatten import flatten
 
 class TestFlatten(unittest.TestCase):
 
-    def test_none(self):
+    def test_none(self) -> None:
         self.assertEqual(flatten(None, prefix="test"), {"test": None})
 
-    def test_numbers(self):
+    def test_numbers(self) -> None:
         self.assertEqual(flatten(int(1), prefix="test"), {"test": 1})
         self.assertEqual(flatten(float(1.01), prefix="test"), {"test": 1.01})
         self.assertEqual(flatten(decimal.Decimal("1.01"), prefix="test"),
                          {"test": decimal.Decimal("1.01")})
 
-    def test_list(self):
+    def test_list(self) -> None:
         self.assertEqual(flatten([], prefix="test"), {})
         self.assertEqual(flatten(["a"], prefix="test"), {"test.0": "a"})
         self.assertEqual(flatten(["a", "a"], prefix="test"), {
@@ -25,7 +25,7 @@ class TestFlatten(unittest.TestCase):
             "a": "b"
         }], prefix="test"), {"test.0.a": "b"})
 
-    def test_dict(self):
+    def test_dict(self) -> None:
         self.assertEqual(flatten({}, prefix="test"), {})
         self.assertEqual(flatten({"a": {}}, prefix="test"), {})
         self.assertEqual(flatten({"a": "b"}, prefix="test"), {"test.a": "b"})
@@ -33,7 +33,7 @@ class TestFlatten(unittest.TestCase):
             "b": "c"
         }}, prefix="test"), {"test.a.b": "c"})
 
-    def test_sep(self):
+    def test_sep(self) -> None:
         self.assertEqual(
             flatten({"a": {
                 "b": "c",

@@ -33,7 +33,7 @@ typecheck:
 	mypy --non-interactive \
 		--install-types \
 		--config-file mypy.ini \
-		incline/ bin/
+		incline/ bin/ tests/
 
 clean:
 	rm -rf incline.egg-info

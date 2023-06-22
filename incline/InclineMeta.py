@@ -1,6 +1,7 @@
 from dataclasses import asdict, dataclass, field
 from incline.InclinePrepare import InclinePxn
 
+
 @dataclass
 class InclineMetaWrite:
     """
@@ -26,7 +27,7 @@ class InclineMeta:
     def add_write(self, write: InclineMetaWrite) -> None:
         self.meta.append(write)
 
-    def to_dict(self) -> dict[str, str]:
+    def to_dict(self) -> list[dict[str, str]]:
         """
         Ok, this really returns a list
         """

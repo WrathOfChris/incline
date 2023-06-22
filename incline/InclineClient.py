@@ -46,7 +46,8 @@ class InclineClient(object):
         self.log = logging.getLogger('incline.client.' + self.name)
         if not self.__log_configured():
             self.logfmt = 'i.client ({0}|{1}) rid={2} cid={3} uid={4} %(message)s'.format(
-                self.name, self.region, self.__rid, self.prepare.cid(), self.__uid)
+                self.name, self.region, self.__rid, self.prepare.cid(),
+                self.__uid)
             handler = logging.StreamHandler(sys.stdout)
             formatter = logging.Formatter(self.logfmt)
             handler.setFormatter(formatter)
@@ -101,9 +102,8 @@ class InclineClient(object):
         for v in vals.values():
             for m in v['met']:
                 # 2.1 - Verify each val metadata older than other vals in set
-                if m['kid'] in vals and (
-                        InclinePxn().loads(vals[m['kid']]['pxn']) <
-                        InclinePxn().loads(m['pxn'])):
+                if m['kid'] in vals and (InclinePxn().loads(
+                        vals[m['kid']]['pxn']) < InclinePxn().loads(m['pxn'])):
                     self.log.warning('get readatomic %s %s %s', m['kid'],
                                      m['loc'], m['pxn'])
                     # 2.2 - GET from LOG any missing newer keys

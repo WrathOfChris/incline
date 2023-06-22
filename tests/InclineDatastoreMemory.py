@@ -17,13 +17,13 @@ class TestDatastoreMemory(TestDatastore):
     maxdiff = None
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.ds = InclineDatastoreMemory(name=TEST_TABLE, region=TEST_REGION)
         # opentelemetry traces to console
         if __name__ == "__main__":
             cls.ds.trace = InclineTraceConsole()
 
-    def test_003_dbtype(self):
+    def test_003_dbtype(self) -> None:
         """  ensure tests run on the correct datastore type """
         self.assertEqual(self.ds.dbtype, "memory")
 

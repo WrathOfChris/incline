@@ -20,7 +20,7 @@ class TestInclineClient(unittest.TestCase):
     maxDiff = None
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.ramp = incline.InclineClient.InclineClient(
             name=TEST_TABLE,
             region=TEST_REGION,
@@ -34,34 +34,34 @@ class TestInclineClient(unittest.TestCase):
         if __name__ == "__main__":
             cls.ramp.trace = InclineTraceConsole()
 
-    def test_get(self):
+    def test_get(self) -> None:
         pass
 
-    def test_get_notfound(self):
+    def test_get_notfound(self) -> None:
         kid = f"{TEST_PREFIX}-never-store-this"
         with self.assertRaises(InclineNotFound):
             items = self.ramp.get(kid)
 
-    def test_put(self):
+    def test_put(self) -> None:
         pass
 
-    def test_puts(self):
+    def test_puts(self) -> None:
         pass
 
-    def test_search(self):
+    def test_search(self) -> None:
         pass
 
-    def test_create(self):
+    def test_create(self) -> None:
         pass
 
-    def test_create_twice(self):
+    def test_create_twice(self) -> None:
         kid = f"{TEST_PREFIX}-create-twice-{self.tsv}"
         pxn = self.ramp.create(kid, kid)
         self.assertNotEqual(pxn, "")
         with self.assertRaises(InclineExists):
             pxn = self.ramp.create(kid, kid)
 
-    def test_create_delete_create(self):
+    def test_create_delete_create(self) -> None:
         kid = f"{TEST_PREFIX}-create-delete-create-{self.tsv}"
         resp = self.ramp.create(kid, kid)
         self.assertNotEqual(resp.pxn, InclinePxn())
@@ -72,7 +72,7 @@ class TestInclineClient(unittest.TestCase):
                             InclinePxn(),
                             msg="key should not exist after previous delete")
 
-    def test_creates(self):
+    def test_creates(self) -> None:
         pass
 
     def test_delete(self):
@@ -84,66 +84,66 @@ class TestInclineClient(unittest.TestCase):
         with self.assertRaises(InclineNotFound):
             items = self.ramp.get(kid)
 
-    def test_getkey(self):
+    def test_getkey(self) -> None:
         pass
 
-    def test_getlog(self):
+    def test_getlog(self) -> None:
         pass
 
-    def test_putatomic(self):
+    def test_putatomic(self) -> None:
         pass
 
-    def test_genmet(self):
+    def test_genmet(self) -> None:
         pass
 
-    def test_cmpval(self):
+    def test_cmpval(self) -> None:
         pass
 
-    def test_verify(self):
+    def test_verify(self) -> None:
         pass
 
-    def test_strval(self):
+    def test_strval(self) -> None:
         pass
 
-    def test_ds_find(self):
+    def test_ds_find(self) -> None:
         pass
 
-    def test_ds_equal(self):
+    def test_ds_equal(self) -> None:
         pass
 
-    def test_ds_open(self):
+    def test_ds_open(self) -> None:
         pass
 
-    def test_putget_1(self):
+    def test_putget_1(self) -> None:
         self.ramp.put(f"{TEST_PREFIX}-putget", dict(value=self.tsv))
 
-    def test_putget_2(self):
+    def test_putget_2(self) -> None:
         self.assertEqual(
             dict(value=self.tsv),
             self.ramp.get(f"{TEST_PREFIX}-putget").get(
                 f"{TEST_PREFIX}-putget").get('dat'))
 
-    def test_type_string(self):
+    def test_type_string(self) -> None:
         self.assertIsNotNone(
             self.ramp.put(f"{TEST_PREFIX}-type-string", str("hello")))
 
-    def test_type_integer(self):
+    def test_type_integer(self) -> None:
         self.assertIsNotNone(
             self.ramp.put(f"{TEST_PREFIX}-type-integer", int(42)))
 
-    def test_type_float(self):
+    def test_type_float(self) -> None:
         self.assertIsNotNone(
             self.ramp.put(f"{TEST_PREFIX}-type-float", float(42.424242)))
 
-    def test_type_dict(self):
+    def test_type_dict(self) -> None:
         self.assertIsNotNone(
             self.ramp.put(f"{TEST_PREFIX}-type-dict", dict(value="string")))
 
-    def test_type_list(self):
+    def test_type_list(self) -> None:
         self.assertIsNotNone(
             self.ramp.put(f"{TEST_PREFIX}-type-list", list("abcdef")))
 
-    def test_type_decimal(self):
+    def test_type_decimal(self) -> None:
         DECIMAL_VALUES = [
             "1",
             "1.0",

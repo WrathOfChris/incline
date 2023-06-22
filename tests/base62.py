@@ -5,28 +5,28 @@ import incline.base62
 
 class TestBase62(unittest.TestCase):
 
-    def test_base_list(self):
+    def test_base_list(self) -> None:
         self.assertEqual(
             "0123456789"
             "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
             "abcdefghijklmnopqrstuvwxyz", incline.base62.BASE_LIST)
         incline.base62.BASE_LIST
 
-    def test_base_decode(self):
+    def test_base_decode(self) -> None:
         self.assertEqual(1234567890, incline.base62.base_decode('1LY7VK'))
 
-    def test_base_encode(self):
+    def test_base_encode(self) -> None:
         self.assertEqual('1LY7VK', incline.base62.base_encode(1234567890))
 
-    def test_base_negative(self):
+    def test_base_negative(self) -> None:
         self.assertEqual('0', incline.base62.base_encode(-1))
 
-    def test_base_float(self):
+    def test_base_float(self) -> None:
         with self.assertRaises(ValueError):
             incline.base62.base_encode(float('inf'))
         self.assertEqual('0', incline.base62.base_encode(float('-inf')))
 
-    def test_base_range_maxsize(self):
+    def test_base_range_maxsize(self) -> None:
         MAXSIZES = [
             2**31 - 1,
             2**63 - 1,    # modulo overrun produces mismatch
@@ -44,7 +44,7 @@ class TestBase62(unittest.TestCase):
             i = incline.base62.base_decode(s)
             self.assertEqual(m, i)
 
-    def test_base_modulo_overrun(self):
+    def test_base_modulo_overrun(self) -> None:
         """
         numbers discovered to start overflowing modulo operations when float
         division is used in base_encode

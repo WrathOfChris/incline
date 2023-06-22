@@ -11,7 +11,6 @@ INCLINE_TXN_QUANTIZE = "1.000000"
 INCLINE_TXN_MONOTIZE = "0.000001"
 INCLINE_TXN_CID_JUST = 9
 INCLINE_TXN_CNT_JUST = 11
-
 """
 https://docs.python.org/3/library/uuid.html#uuid.getnode
 
@@ -26,6 +25,7 @@ first octet is unset) will be preferred over locally administered MAC
 addresses, but with no other ordering guarantees.
 """
 INCLINE_TXN_CLIENTID = uuid.getnode()
+
 
 @dataclass(order=True)
 class InclinePxn:
@@ -93,8 +93,8 @@ class InclinePrepare(object):
             else:
                 self.__cid = base_decode(cid)
         if not self.__cidstr:
-            self.__cidstr = base_encode(self.__cid).rjust(INCLINE_TXN_CID_JUST,
-                                                          '0')
+            self.__cidstr = base_encode(self.__cid).rjust(
+                INCLINE_TXN_CID_JUST, '0')
         return self.__cidstr
 
     def cnt(self, cnt: int | None = None) -> int:
