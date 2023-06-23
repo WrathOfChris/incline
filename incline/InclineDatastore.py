@@ -354,6 +354,10 @@ class InclineDatastore(object):
         """
         map a dict of arguments into span attributes
         filter out 'dat' to avoid tracing stored data
+
+        Warning Message: Invalid type <type> for attribute '<attr>' value.
+                         Expected one of ['bool', 'str', 'bytes', 'int',
+                         'float'] or a sequence of those types
         """
         flat = flatten(value, prefix="request")
         for k, v in flat.items():
@@ -365,6 +369,12 @@ class InclineDatastore(object):
             # string instead of float losing precision for Decimal
             if isinstance(v, Decimal):
                 v = str(v)
+            # Prepare Transaction ID
+            if isinstance(v, InclinePxn):
+                v = format(v)
+            # Metadata
+            if isinstance(v, InclineMeta):
+                v = v.to_dict()
             # cannot set span attribute to None
             if v == None:
                 continue
