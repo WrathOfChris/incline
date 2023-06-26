@@ -6,7 +6,9 @@ from typing import Any, Type
 import uuid
 import incline.InclineDatastore
 import incline.InclineClient
+from incline.InclineMeta import InclineMeta
 from incline.InclinePrepare import InclinePxn
+from incline.InclineRecord import InclineRecord
 from incline.InclineTraceConsole import InclineTraceConsole
 from incline.error import InclineNotFound
 
@@ -252,7 +254,7 @@ class TestDatastore(unittest.TestCase):
 
     def fixture(self,
                 kid: str,
-                dat: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+                dat: dict[str, Any] | None = None) -> list[InclineRecord]:
         pxn = ramp.prepare.pxn()
         datseq = []
         if dat:
@@ -273,16 +275,16 @@ class TestDatastore(unittest.TestCase):
         met = ramp.genmet([], "", kid, pxn, [dat])
         prepare = self.ds.prepare(kid, pxn, met, dat)
         p = self.ds.only(prepare)
-        self.assertEqual(p['kid'], kid)
-        self.assertEqual(p['pxn'], pxn.pxn)
-        self.assertEqual(p['cid'], self.ds.pxn.cid())
-        self.assertEqual(p['met'], met.to_dict())
-        self.assertEqual(p['rid'], self.ds.rid())
-        self.assertEqual(p['uid'], self.ds.uid())
-        self.assertIsInstance(p['tsv'], Decimal)
-        self.assertGreater(self.ds.pxn.now(), p['tsv'])
-        self.assertEqual(p['dat'], dat)
-        self.assertEqual(p['ver'], self.ds.version)
+        self.assertEqual(p.kid, kid)
+        self.assertEqual(p.pxn, pxn)
+        self.assertEqual(p.cid, self.ds.pxn.cid())
+        self.assertEqual(p.met, met)
+        self.assertEqual(p.rid, self.ds.rid())
+        self.assertEqual(p.uid, self.ds.uid())
+        self.assertIsInstance(p.tsv, Decimal)
+        self.assertGreater(self.ds.pxn.now(), p.tsv)
+        self.assertEqual(p.dat, dat)
+        self.assertEqual(p.ver, self.ds.version)
 
     def test_prepare_commit_2(self) -> None:
         kid = f"{TEST_PREFIX}-prepare-commit"
@@ -290,21 +292,21 @@ class TestDatastore(unittest.TestCase):
         pxn = self.__class__.test_prepare_commit_pxn
         commit = self.ds.commit(kid, pxn)
         c = self.ds.only(commit)
-        self.assertEqual(c['kid'], kid)
-        self.assertEqual(c['pxn'], pxn.pxn)
-        self.assertEqual(c['cid'], self.ds.pxn.cid())
-        self.assertEqual(c['met'], [])
-        self.assertEqual(c['rid'], self.ds.rid())
-        self.assertEqual(c['uid'], self.ds.uid())
-        self.assertIsInstance(c['tsv'], Decimal)
-        self.assertGreater(self.ds.pxn.now(), c['tsv'])
-        self.assertEqual(c['dat'], {'kid': kid, 'dat': kid})
-        self.assertFalse(c['tmb'])
-        self.assertEqual(c['ver'], self.ds.version)
+        self.assertEqual(c.kid, kid)
+        self.assertEqual(c.pxn, pxn)
+        self.assertEqual(c.cid, self.ds.pxn.cid())
+        self.assertEqual(c.met, InclineMeta(meta=[]))
+        self.assertEqual(c.rid, self.ds.rid())
+        self.assertEqual(c.uid, self.ds.uid())
+        self.assertIsInstance(c.tsv, Decimal)
+        self.assertGreater(self.ds.pxn.now(), c.tsv)
+        self.assertEqual(c.dat, {'kid': kid, 'dat': kid})
+        self.assertFalse(c.tmb)
+        self.assertEqual(c.ver, self.ds.version)
 
         # test and memory guarantee this is new record.  persistent does not
         if self.ds.dbtype in ['none', 'memory']:
-            self.assertEqual(c['org'], 0)
+            self.assertEqual(c.org, 0)
 
     def test_ds_get_txn_kid_notfound(self) -> None:
         kid = f"{TEST_PREFIX}-never-store-this"
@@ -319,7 +321,7 @@ class TestDatastore(unittest.TestCase):
     def test_delete_tombstone(self) -> None:
         kid = f"{TEST_PREFIX}-delete-tombstone"
         fix = self.ds.only(self.fixture(kid, None))
-        resp = self.ds.only(self.ds.ds_get_txn(kid, tsv=fix['tsv']))
+        resp = self.ds.only(self.ds.ds_get_txn(kid, tsv=fix.tsv))
         self.assertGreater(resp['tmb'], 0)
         self.assertEqual(resp['dat'], {})
 

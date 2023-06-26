@@ -9,6 +9,7 @@ from incline.InclineDatastore import incline_resolve
 from incline.InclineDatastoreDynamo import InclineDatastoreDynamo
 from incline.InclineMeta import InclineMeta, InclineMetaWrite
 from incline.InclinePrepare import InclinePrepare, InclinePxn
+from incline.InclineRecord import InclineRecord
 from incline.InclineResponse import InclineResponse
 from incline.InclineTrace import InclineTrace
 from incline.router import InclineRouterOne
@@ -84,7 +85,7 @@ class InclineClient(object):
             self.__uid = '0'
         return self.__uid
 
-    def get(self, keys: list[str] | str) -> dict[str, dict[str, Any]]:
+    def get(self, keys: list[str] | str) -> InclineResponse:
         vals = dict()
         if not keys:
             raise InclineInterface('client get with no keys')
@@ -93,23 +94,34 @@ class InclineClient(object):
 
         self.log.info('get [%s]', ','.join(keys))
 
+        pxn = InclinePxn(cid=0, cnt=0)
+
         # Round 1 - GET highest commit for each key
         for k in keys:
             val = self.getkey(k)
-            vals[val['kid']] = val
+            vals[val.kid] = val
+
+            # preserve highest pxn for response
+            if val.pxn > pxn:
+                pxn = val.pxn
 
         # Round 2 - Resolve inconsistencies
         for v in vals.values():
-            for m in v['met']:
+            for m in v.met.meta:
                 # 2.1 - Verify each val metadata older than other vals in set
-                if m['kid'] in vals and (InclinePxn().loads(
-                        vals[m['kid']]['pxn']) < InclinePxn().loads(m['pxn'])):
-                    self.log.warning('get readatomic %s %s %s', m['kid'],
-                                     m['loc'], m['pxn'])
+                if m.kid in vals and (vals[m.kid].pxn < m.pxn):
+                    self.log.warning(f"get readatomic {m.kid} {m.loc} {m.pxn}")
                     # 2.2 - GET from LOG any missing newer keys
-                    vals[m['kid']] = self.getlog(m['kid'], m['loc'], m['pxn'])
+                    vals[m.kid] = self.getlog(m.kid, m.loc, m.pxn)
 
-        return vals
+                    # preserve highest pxn for response
+                    if val.pxn > pxn:
+                        pxn = val.pxn
+
+        resp = InclineResponse(pxn=pxn)
+        for k, v in vals.items():
+            resp.data[k] = v
+        return resp
 
     def put(self, kid: str, dat: dict[str, Any]) -> InclineResponse:
         self.log.info('put %s', kid)
@@ -149,10 +161,10 @@ class InclineClient(object):
         resp = self.putatomic([{'kid': kid, 'dat': {}}], mode='delete')
         return resp
 
-    def getkey(self, key: str) -> dict[str, Any]:
+    def getkey(self, key: str) -> InclineRecord:
         datastores = self.rtr.lookup('read', key)
         self.log.info('getkey %s [%s]', key, ','.join(datastores))
-        vals = list()
+        vals: list[InclineRecord] = list()
         for ds in datastores:
             con = self.ds_open(ds)
             val = con.get(key)
@@ -162,9 +174,9 @@ class InclineClient(object):
             raise InclineNotFound('key not found in any datastore')
         return self.verify(vals)
 
-    def getlog(self, key: str, loc: str, pxn: InclinePxn) -> dict[str, Any]:
+    def getlog(self, key: str, loc: str, pxn: InclinePxn) -> InclineRecord:
         self.log.info('getlog %s %s %s', key, loc, format(pxn))
-        vals = list()
+        vals: list[InclineRecord] = list()
         con = self.ds_open(loc)
         val = con.get(key, pxn=pxn)
         for v in val:
@@ -202,8 +214,10 @@ class InclineClient(object):
                 if ds in d['datastores']:
                     con.commit(d['kid'], pxn, mode=mode)
 
-        # XXX TODO XXX add records and transaction data
-        return InclineResponse(pxn=pxn)
+        resp = InclineResponse(pxn=pxn)
+        for d in dat:
+            resp.data[d['kid']] = InclineRecord(d['kid'], record=d)
+        return resp
 
     def genmet(self,
                datastores: list[str],
@@ -240,12 +254,7 @@ class InclineClient(object):
 
         return met
 
-    def cmpval(self, val1: dict[str, Any], val2: dict[str, Any]) -> bool:
-        if val1['dat'] == val2['dat']:
-            return True
-        return False
-
-    def verify(self, vals: list[dict[str, Any]]) -> dict[str, Any]:
+    def verify(self, vals: list[InclineRecord]) -> InclineRecord:
         """
         Compare values returned from multiple sources, log errors, and return
         the newest value.
@@ -254,17 +263,13 @@ class InclineClient(object):
             return vals[0]
         for v1, v2 in itertools.combinations(vals, 2):
             val = v1
-            if v1['tsv'] < v2['tsv']:
+            if v1.tsv < v2.tsv:
                 val = v2
-            if not self.cmpval(v1, v2):
+            if v1.dat != v2.dat:
                 print('client validation error')
-                print('A: {0}'.format(self.strval(v1)))
-                print('B: {0}'.format(self.strval(v2)))
+                print('A: {0}'.format(v1))
+                print('B: {0}'.format(v2))
         return val
-
-    def strval(self, val: dict[str, Any]) -> str:
-        return 'kid={0} tsv={1} pxn={2}'.format(val['kid'], val['tsv'],
-                                                val['pxn'])
 
     def ds_find(self, location: str) -> InclineDatastoreDynamo | None:
         for c in self.cons:

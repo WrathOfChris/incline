@@ -123,34 +123,44 @@ class TestInclineClient(unittest.TestCase):
         self.ramp.put(f"{TEST_PREFIX}-putget", dict(value=self.tsv))
 
     def test_putget_2(self) -> None:
-        self.assertEqual(
-            dict(value=self.tsv),
-            self.ramp.get(f"{TEST_PREFIX}-putget").get(f"{TEST_PREFIX}-putget",
-                                                       {}).get('dat'))
+        self.assertEqual(dict(value=self.tsv),
+                         self.ramp.get(f"{TEST_PREFIX}-putget").only.data)
 
     def test_type_string(self) -> None:
-        self.assertIsNotNone(
-            self.ramp.put(f"{TEST_PREFIX}-type-string",
-                          str("hello")))    # type: ignore
+        key = f"{TEST_PREFIX}-type-string"
+        val = str("hello")
+        resp = self.ramp.put(key, val)    # type: ignore
+        self.assertIsNotNone(resp)
+        self.assertEqual(val, self.ramp.get(key).only.data)
 
     def test_type_integer(self) -> None:
-        self.assertIsNotNone(
-            self.ramp.put(f"{TEST_PREFIX}-type-integer",
-                          int(42)))    # type: ignore
+        key = f"{TEST_PREFIX}-type-integer"
+        val = int(42)
+        resp = self.ramp.put(key, val)    # type: ignore
+        self.assertIsNotNone(resp)
+        self.assertEqual(val, self.ramp.get(key).only.data)
 
     def test_type_float(self) -> None:
-        self.assertIsNotNone(
-            self.ramp.put(f"{TEST_PREFIX}-type-float",
-                          float(42.424242)))    # type: ignore
+        key = f"{TEST_PREFIX}-type-float"
+        val = float(42.424242)
+        resp = self.ramp.put(key, val)    # type: ignore
+        self.assertIsNotNone(resp)
+        # float internally converted to Decimal
+        self.assertEqual(Decimal('42.424242'), self.ramp.get(key).only.data)
 
     def test_type_dict(self) -> None:
-        self.assertIsNotNone(
-            self.ramp.put(f"{TEST_PREFIX}-type-dict", dict(value="string")))
+        key = f"{TEST_PREFIX}-type-dict"
+        val = dict(value="string")
+        resp = self.ramp.put(key, val)
+        self.assertIsNotNone(resp)
+        self.assertEqual(val, self.ramp.get(key).only.data)
 
     def test_type_list(self) -> None:
-        self.assertIsNotNone(
-            self.ramp.put(f"{TEST_PREFIX}-type-list",
-                          list("abcdef")))    # type: ignore
+        key = f"{TEST_PREFIX}-type-list"
+        val = list("abcdef")
+        resp = self.ramp.put(key, val)    # type: ignore
+        self.assertIsNotNone(resp)
+        self.assertEqual(val, self.ramp.get(key).only.data)
 
     def test_type_decimal(self) -> None:
         DECIMAL_VALUES = [
@@ -169,12 +179,10 @@ class TestInclineClient(unittest.TestCase):
             -10**38 + 1    # dynamodb minimum size, 38 digits
         ]
         for d in DECIMAL_VALUES:
-            self.ramp.put(f"{TEST_PREFIX}-type-decimal",
-                          Decimal(d))    # type: ignore
-            self.assertEqual(
-                Decimal(d),    # type: ignore
-                self.ramp.get(f"{TEST_PREFIX}-type-decimal").get(
-                    f"{TEST_PREFIX}-type-decimal", {}).get('dat'))
+            key = f"{TEST_PREFIX}-type-decimal"
+            val = {'decimal': Decimal(d)}    # type: ignore
+            self.ramp.put(key, val)
+            self.assertEqual(val, self.ramp.get(key).only.data)
 
 
 if __name__ == "__main__":
