@@ -93,7 +93,7 @@ class InclineRecord:
             if isinstance(val['met'], InclineMeta):
                 self.met = val['met']
             else:
-                self.met = InclineMeta(val['met'])
+                self.met = InclineMeta().from_dict(val['met'])
 
         if val.get('dat'):
             self.dat = val['dat']
