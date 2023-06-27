@@ -1,6 +1,6 @@
-# type: ignore
 import logging
 import importlib.metadata
+from typing import Any
 
 __version__ = importlib.metadata.version("incline")
 
@@ -9,7 +9,7 @@ __version__ = importlib.metadata.version("incline")
 # http://docs.python.org/3.3/howto/logging.html#configuring-logging-for-a-library
 class NullHandler(logging.Handler):
 
-    def emit(self, record):
+    def emit(self, record: Any) -> None:
         pass
 
 
