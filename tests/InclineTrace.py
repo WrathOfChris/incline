@@ -23,6 +23,9 @@ class TestInclineTrace(unittest.TestCase):
                 f"{TEST_PREFIX}-start_as_current_span") as span:
             span.set_attribute("test.test_start_as_current_span", True)
 
+    def test_get_current_span(self) -> None:
+        self.assertIsNotNone(trace.get_current_span())
+
 
 if __name__ == "__main__":
     # opentelemetry traces to console

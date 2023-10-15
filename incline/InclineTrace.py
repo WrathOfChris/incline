@@ -35,3 +35,7 @@ class InclineTrace(object):
     def span(self,
              name: str) -> contextlib.AbstractContextManager[trace.span.Span]:
         return self.tracer.start_as_current_span(name)
+
+    def get_current_span(
+            self) -> contextlib.AbstractContextManager[trace.span.Span]:
+        return trace.get_current_span()
