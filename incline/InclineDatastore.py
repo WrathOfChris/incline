@@ -390,7 +390,9 @@ class InclineDatastore(object):
                 v = format(v)
             # Metadata
             if isinstance(v, InclineMeta):
-                v = v.to_dict()
+                for kk, vv in flatten(v.to_dict(),
+                                      prefix=f"request.{k}").items():
+                    span.set_attribute(kk, vv)
             # cannot set span attribute to None
             if v == None:
                 continue
