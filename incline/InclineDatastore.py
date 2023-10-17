@@ -388,11 +388,12 @@ class InclineDatastore(object):
             # Prepare Transaction ID
             if isinstance(v, InclinePxn):
                 v = format(v)
-            # Metadata
+            # Metadata flatten as dict to set attributes
             if isinstance(v, InclineMeta):
                 for kk, vv in flatten(v.to_dict(),
                                       prefix=f"request.{k}").items():
                     span.set_attribute(kk, vv)
+                continue
             # cannot set span attribute to None
             if v == None:
                 continue
