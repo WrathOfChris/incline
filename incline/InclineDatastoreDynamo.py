@@ -11,14 +11,8 @@ import botocore.config
 from botocore.exceptions import ClientError
 from boto3.dynamodb.conditions import Key, Attr
 from boto3.dynamodb.types import TypeDeserializer
-
-# OpenTelemetry Instrumenting
-from opentelemetry.instrumentation.botocore import BotocoreInstrumentor
-import botocore
 from opentelemetry.trace.span import Span
 
-# Instrument Botocore
-BotocoreInstrumentor().instrument()    # type: ignore
 """
 LOG FORMAT
 {
