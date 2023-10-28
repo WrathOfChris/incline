@@ -9,6 +9,5 @@ def incline_version() -> dict[str, str]:
         "incline": __version__,
         "python": platform.python_version(),
         "boto3": importlib.metadata.version("boto3"),
-        "opentelemetry-api": version("opentelemetry-api"),
-        "opentelemetry-sdk": version("opentelemetry-sdk")
+        "opentelemetry-api": version("opentelemetry-api")
     }

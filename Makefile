@@ -2,7 +2,7 @@ all: install
 	@echo done
 
 build:
-	python3 -m build --wheel
+	python -m build --wheel
 
 test:
 	AWS_PROFILE=test-incline pytest
@@ -11,14 +11,14 @@ test-telemetry:
 	AWS_PROFILE=test-incline pytest --capture=no
 
 depend:
-	python3 -m pip install --requirement requirements.txt
+	python -m pip install --requirement requirements.txt
 
 depend-dev:
-	python3 -m pip install --requirement requirements-dev.txt
-	python3 -m pip install -e ".[dev]"
+	python -m pip install --requirement requirements-dev.txt
+	python -m pip install -e ".[dev]"
 
 install:
-	python -m setup install
+	python -m pip install -e
 
 incline/VERSION:
 	setuptools-git-versioning >$@

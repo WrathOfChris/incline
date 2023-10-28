@@ -5,3 +5,4 @@ awscli>=1.29.73,<2
 mypy>=1.6.1,<2
 boto3-stubs>=1.28.73,<2
 build>=1.0.3,<2
+opentelemetry-sdk>=1.20.0,<2
