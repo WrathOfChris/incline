@@ -188,6 +188,7 @@ class InclineDatastoreDynamo(InclineDatastore):
             self.map_request_span(request_args, span)
 
             # Read current version for origin tsv
+            # NOTE: Tombstone race between origin.tsv -> create.tsv starts here
             orgtsv = 0
             org = self.only(self.ds_get_txn(kid))
             if org and 'tsv' in org:
@@ -197,26 +198,29 @@ class InclineDatastoreDynamo(InclineDatastore):
 
             kwargs = {}
 
-            # To prevent PutItem from overwriting an existing item, use a
-            # conditional expression that specifies that the partition key of
-            # the item does not exist. Since every item in the table must have
-            # a partition key, this will prevent any existing item from being
-            # overwritten
             if mode == 'create':
-                # Tombstones prevent ConditionExpression on the partition key
-                # from working as a condition.
-                #
-                # RACE: tombstone delete multiple creates.  Detected by post-
-                #       delete records with same tombstone origin
-                if not self.is_txn_deleted(org, log.get('tsv')):
+                # To prevent PutItem from overwriting an existing item, use a
+                # conditional expression that specifies that the partition key
+                # of the item does not exist. Since every item in the table
+                # must have a partition key, this will prevent any existing
+                # item from being overwritten
+                if not org:
                     kwargs['ConditionExpression'] = Attr('kid').not_exists()
+                else:
+                    # Tombstones prevent ConditionExpression on the partition
+                    # key from working as a condition.
+                    #
+                    # TODO consider transact_write_items() to mitigate race
+                    #      between origin.tsv --> create.tsv
 
-                # Force unique range key for the transaction by zeroing tsv
-                # This means re-committing an old transaction refreshes it
-                log['tsv'] = 0
+                    # Check origin when create was prepared.  If not a
+                    # tombstone, then key existed at prepare
+                    if not self.is_txn_deleted(org, log.get('tsv')):
+                        raise InclineExists('key already exists')
 
-                ## XXX ^^^ delete above, try with current tsv
-                #log['tsv'] = self.pxn.now()
+                    # Check again, noting the create was after prepare
+                    if not self.is_txn_deleted(org):
+                        raise InclineExists('key exists, create after prepare')
 
             if mode == 'delete':
                 log['dat'] = None

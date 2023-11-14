@@ -188,6 +188,10 @@ class InclineClient(object):
     def putatomic(self,
                   dat: list[dict[str, Any]],
                   mode: str | None = None) -> InclineResponse:
+        """
+        InclineResponse includes a list of all InclineRecord commits to all
+        datastores
+        """
         # TODO: check number ranges and data types (ex: dynamo decimal)
         datastores = list()
         pxn = self.prepare.pxn()
@@ -208,15 +212,17 @@ class InclineClient(object):
                     met = self.genmet(d['datastores'], ds, d['kid'], pxn, dat)
                     con.prepare(d['kid'], pxn, met, d['dat'])
 
+        commits = []
         for ds in datastores:
             con = self.ds_open(ds)
             for d in dat:
                 if ds in d['datastores']:
-                    con.commit(d['kid'], pxn, mode=mode)
+                    commit = con.commit(d['kid'], pxn, mode=mode)
+                    commits += commit
 
         resp = InclineResponse(pxn=pxn)
-        for d in dat:
-            resp.data[d['kid']] = InclineRecord(d['kid'], record=d)
+        for c in commits:
+            resp.data[c.kid] = c
         return resp
 
     def genmet(self,

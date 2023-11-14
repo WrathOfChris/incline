@@ -54,7 +54,25 @@ class TestInclineClient(unittest.TestCase):
         pass
 
     def test_create(self) -> None:
-        pass
+        kid = f"{TEST_PREFIX}-create-{self.tsv}"
+        dat = {'key': kid}
+        resp = self.ramp.create(kid, dat)
+        self.assertNotEqual(resp.pxn, InclinePxn())
+        self.assertNotEqual(resp.only.tsv, 0, msg="create tsv cannot be zero")
+        self.assertNotEqual(resp.only.ver, 0, msg="create ver cannot be zero")
+        self.assertGreater(resp.only.tsv, self.tsv,
+                           msg="create tsv must be after test run starts")
+
+    def test_create_get(self) -> None:
+        kid = f"{TEST_PREFIX}-create-get-{self.tsv}"
+        dat = {'key': kid}
+
+        resp = self.ramp.create(kid, dat)
+        rec_1 = resp.only
+
+        resp = self.ramp.get(kid)
+        self.assertDictEqual(rec_1.to_dict(), resp.only.to_dict(),
+                             msg="get after create should be equal")
 
     def test_create_twice(self) -> None:
         kid = f"{TEST_PREFIX}-create-twice-{self.tsv}"
@@ -67,14 +85,29 @@ class TestInclineClient(unittest.TestCase):
     def test_create_delete_create(self) -> None:
         kid = f"{TEST_PREFIX}-create-delete-create-{self.tsv}"
         dat = {'key': kid}
+
         resp = self.ramp.create(kid, dat)
+        rec_1 = resp.only
         self.assertNotEqual(resp.pxn, InclinePxn())
+
         resp = self.ramp.delete(kid)
+        rec_2 = resp.only
         self.assertNotEqual(resp.pxn, InclinePxn())
+
         resp = self.ramp.create(kid, dat)
-        self.assertNotEqual(resp.pxn,
-                            InclinePxn(),
-                            msg="key should not exist after previous delete")
+        rec_3 = resp.only
+
+        self.assertNotEqual(rec_1.tsv, rec_3.tsv,
+                            msg="create after delete overwrote first")
+
+        self.assertGreater(rec_3.tsv, rec_1.tsv,
+                            msg="second create must be later")
+
+        resp = self.ramp.get(kid)
+        rec_4 = resp.only
+
+        self.assertDictEqual(rec_3.to_dict(), rec_4.to_dict(),
+                             msg="get must be second create")
 
     def test_creates(self) -> None:
         pass

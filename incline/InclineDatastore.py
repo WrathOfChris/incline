@@ -185,10 +185,6 @@ class InclineDatastore(object):
             'dat': log['dat']
         }
 
-        # InclineDatastoreDynamo/create zeroes tsv
-        #if txn['tsv'] == 0:
-        #    txn['tsv'] = self.pxn.now()
-
         return txn
 
     """

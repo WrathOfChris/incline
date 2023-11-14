@@ -95,6 +95,8 @@ class InclineRecord:
             else:
                 self.met = InclineMeta().from_dict(val['met'])
 
+        # delete records use dat=None, ensure dat exists
+        self.dat = None
         if val.get('dat'):
             self.dat = val['dat']
 
