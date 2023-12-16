@@ -71,21 +71,28 @@ class InclineDatastore(object):
     def get(self,
             kid: str,
             tsv: Decimal | None = None,
-            pxn: InclinePxn | None = None) -> list[InclineRecord]:
+            pxn: InclinePxn | None = None,
+            limit: int = 1) -> list[InclineRecord]:
+        """
+        limit only applies to committed transactions
+        """
         request_args = locals()
         with self.trace.span("incline.get") as span:
             self.map_request_span(request_args, span)
             result: list[dict[str, Any]]
             if tsv:
                 self.log.info('get %s tsv %s', kid, tsv)
-                return self.data_to_records(self.ds_get_txn(kid, tsv))
+                return self.data_to_records(self.ds_get_txn(kid,
+                                                            tsv=tsv,
+                                                            limit=limit))
             elif pxn:
                 self.log.info('get %s pxn %s', kid, format(pxn))
-                return self.data_to_records(self.ds_get_log(kid, pxn))
+                return self.data_to_records(self.ds_get_log(kid, pxn=pxn))
 
             self.log.info('get %s', kid)
             return self.data_to_records(
-                self.filter_deleted(self.ds_get_txn(kid), tsv=tsv))
+                self.filter_deleted(self.ds_get_txn(kid, limit=limit),
+                                    tsv=tsv))
 
     def filter_deleted(self,
                        txns: list[dict[str, Any]] | dict[str, Any],

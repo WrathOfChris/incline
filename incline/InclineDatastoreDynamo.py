@@ -89,7 +89,7 @@ class InclineDatastoreDynamo(InclineDatastore):
             else:
                 self.log.info('getlog %s', kid)
                 kwargs['KeyConditionExpression'] = Key('kid').eq(
-                    kid)    # type: ignore
+                        kid)   # type: ignore
                 kwargs['ScanIndexForward'] = False    # type:ignore
 
             with self.trace.span("aws.dynamodb.query") as span_query:
@@ -129,11 +129,12 @@ class InclineDatastoreDynamo(InclineDatastore):
             kwargs = {}
             if tsv:
                 self.log.info('gettxn %s tsv %s', kid, tsv)
-                kwargs['KeyConditionExpression'] = Key('kid').eq(kid) & Key(
-                    'tsv').eq(tsv)
+                kwargs['KeyConditionExpression'] = Key('kid').eq(kid) & \
+                        Key('tsv').lte(tsv)
             else:
                 self.log.info('gettxn %s', kid)
-                kwargs['KeyConditionExpression'] = Key('kid').eq(kid)
+                kwargs['KeyConditionExpression'] = Key('kid').eq(
+                        kid)    # type: ignore
                 kwargs['ScanIndexForward'] = False    # type: ignore
                 if limit:
                     kwargs['Limit'] = limit    # type: ignore
@@ -261,14 +262,15 @@ class InclineDatastoreDynamo(InclineDatastore):
             if kid and tsv:
                 self.log.info(f"scanlog {kid} tsv {tsv}")
                 kwargs['FilterExpression'] = \
-                        Key('key').eq(kid) & Key('tsv').le(tsv) # type: ignore
+                        Key('kid').eq(kid) & Key('tsv').lte(tsv)
             elif kid and not tsv:
                 self.log.info(f"scanlog {kid}")
-                kwargs['FilterExpression'] = Key('key').eq(kid)
+                kwargs['FilterExpression'] = Key('kid').eq(
+                        kid)    # type: ignore
             elif not kid and tsv:
                 self.log.info(f"scanlog tsv {tsv}")
                 kwargs['FilterExpression'] = \
-                        Key('key').eq(kid) & Key('tsv').lte(tsv)
+                        Key('kid').eq(kid) & Key('tsv').lte(tsv)
             else:
                 self.log.info(f"scanlog (all)")
 
@@ -319,20 +321,27 @@ class InclineDatastoreDynamo(InclineDatastore):
             if kid and tsv:
                 self.log.info(f"scantxn {kid} tsv {tsv}")
                 kwargs['FilterExpression'] = \
-                        Key('key').eq(kid) & Key('tsv').lte(tsv)
+                        Key('kid').eq(kid) & Key('tsv').lte(tsv)
             elif kid and not tsv:
                 self.log.info(f"scantxn {kid}")
-                kwargs['FilterExpression'] = Key('key').eq(
-                    kid)    # type: ignore
+                kwargs['FilterExpression'] = Key('kid').eq(
+                        kid)    # type: ignore
             elif not kid and tsv:
                 self.log.info(f"scantxn tsv {tsv}")
                 kwargs['FilterExpression'] = \
-                        Key('key').eq(kid) & Key('tsv').lte(tsv)
+                        Key('kid').eq(kid) & Key('tsv').lte(tsv)
             else:
                 self.log.info(f"scantxn (all)")
 
             with self.trace.span("aws.dynamodb.scan") as span_scan:
-                paginator = self.dynamoclient.get_paginator('scan')
+                paginator = self.dynamores.meta.client.get_paginator('scan')
+                # paginator = self.dynamoclient.get_paginator('scan')
+                #
+                # https://github.com/boto/boto3/issues/2300
+                # Invalid type for parameter FilterExpression,
+                #   value: <boto3.dynamodb.conditions.Equals ...
+                #   t-ype: <class 'boto3.dynamodb.conditions.Equals'>
+                #   valid types: <class 'str'>
                 resp = paginator.paginate(TableName=self.txnname,
                                           Select='SPECIFIC_ATTRIBUTES',
                                           ProjectionExpression='kid, tsv, ver',
@@ -456,7 +465,9 @@ class InclineDatastoreDynamo(InclineDatastore):
 
         results = list()
         for r in resp['Items']:
-            data = {k: deserializer.deserialize(v) for k, v in r.items()}
+            # TODO check if deserialize still necessary
+            #data = {k: deserializer.deserialize(v) for k, v in r.items()}
+            data = r
             if 'ver' not in data:
                 continue
             if int(data['ver'] == 1):

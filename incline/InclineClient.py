@@ -1,4 +1,4 @@
-import decimal
+from decimal import Decimal
 import json
 import itertools
 import logging
@@ -159,6 +159,38 @@ class InclineClient(object):
         """
         self.log.info('delete %s', kid)
         resp = self.putatomic([{'kid': kid, 'dat': {}}], mode='delete')
+        return resp
+
+    def history(self,
+                key: str,
+                tsv: Decimal | None = None,
+                limit: int = 0) -> InclineResponse:
+        """
+        History returns a page of history starting at tsv or most recent
+
+        tsv     - timestamp less than or equal to
+        limit   - zero is unlimited, otherwise the number of items to return
+        """
+        datastores = self.rtr.lookup('read', key)
+        self.log.info('history %s [%s]', key, ','.join(datastores))
+        vals: list[InclineRecord] = list()
+        for ds in datastores:
+            con = self.ds_open(ds)
+            val = con.get(key, tsv=tsv, limit=limit)
+            for v in val:
+                vals.append(v)
+        if not vals:
+            raise InclineNotFound('key not found in any datastore')
+
+        # sort newest -> oldest
+        vals.sort(key=lambda x: x.tsv, reverse=True)
+
+        # set response pxn to the first (newest) record
+        first = next(iter(vals))
+        resp = InclineResponse(pxn=first.pxn)
+        for v in vals:
+            resp.data[str(v.tsv)] = v
+
         return resp
 
     def getkey(self, key: str) -> InclineRecord:
