@@ -133,8 +133,7 @@ class InclineDatastoreDynamo(InclineDatastore):
                     'tsv').eq(tsv)
             else:
                 self.log.info('gettxn %s', kid)
-                kwargs['KeyConditionExpression'] = Key('kid').eq(
-                    kid)    # type: ignore
+                kwargs['KeyConditionExpression'] = Key('kid').eq(kid)
                 kwargs['ScanIndexForward'] = False    # type: ignore
                 if limit:
                     kwargs['Limit'] = limit    # type: ignore

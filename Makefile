@@ -18,7 +18,7 @@ depend-dev:
 	python -m pip install -e ".[dev]"
 
 install:
-	python -m pip install -e
+	python -m pip install -e .
 
 incline/VERSION:
 	setuptools-git-versioning >$@
