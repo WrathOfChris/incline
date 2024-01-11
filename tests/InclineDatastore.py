@@ -332,6 +332,67 @@ class TestDatastore(unittest.TestCase):
         # needs a fixture
         pass
 
+    def test_set_index(self) -> None:
+        kid = f"{TEST_PREFIX}-set-index"
+        index = incline.InclineDatastore.InclineIndex(name='one',
+                                                      path='one')
+        self.ds.set_index(index)
+        self.assertIn('one', self.ds.indexes)
+        fixes = self.fixture(kid,
+                             {'kid': kid,
+                              'dat': {
+                                  'one': {'two': 'three'},
+                                  'four': 'five'
+                                  }
+                              })
+        fix = self.ds.only(fixes)
+        #self.assertIn('idx_one', fix)
+        # TODO check fixture contains idx_one
+
+    def test_set_index_path(self) -> None:
+        kid = f"{TEST_PREFIX}-set-index-path"
+        index = incline.InclineDatastore.InclineIndex(name='two',
+                                                      path='one.two')
+        self.ds.set_index(index)
+        self.assertIn('two', self.ds.indexes)
+        fixes = self.fixture(kid,
+                             {'kid': kid,
+                              'dat': {
+                                  'one': {'two': 'three'},
+                                  'four': 'five'
+                                  }
+                              })
+        fix = self.ds.only(fixes)
+        #self.assertIn('idx_two', fix)
+        # TODO check fixture contains idx_two
+
+    def test_set_index_value(self) -> None:
+        kid = f"{TEST_PREFIX}-set-index-value"
+        index = incline.InclineDatastore.InclineIndex(name='six',
+                                                      value='seven')
+        self.ds.set_index(index)
+        self.assertIn('six', self.ds.indexes)
+        fixes = self.fixture(kid,
+                             {'kid': kid,
+                              'dat': {
+                                  'one': {'two': 'three'},
+                                  'four': 'five'
+                                  }
+                              })
+        fix = self.ds.only(fixes)
+        #self.assertIn('idx_six', fix)
+        # TODO check fixture contains idx_six=seven
+
+    def test_get_index(self) -> None:
+        dat: dict[str, Any] = {
+                'one': {'two': 'three'},
+                'four': 'five'
+                }
+        val = self.ds.get_index("one", dat)
+        self.assertEqual(dat['one'], val)
+
+        val = self.ds.get_index("one.two", dat)
+        self.assertEqual(dat['one']['two'], val)
 
 if __name__ == "__main__":
     unittest.main()

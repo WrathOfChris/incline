@@ -159,6 +159,46 @@ class TestInclineClient(unittest.TestCase):
         self.assertEqual(dict(value=self.tsv),
                          self.ramp.get(f"{TEST_PREFIX}-putget").only.data)
 
+    def test_set_index(self) -> None:
+        kid = f"{TEST_PREFIX}-set-index"
+        index = incline.InclineDatastore.InclineIndex(name='one',
+                                                      path='one')
+        self.ramp.set_index(index)
+        self.assertIn('one', self.ramp.indexes)
+        resp = self.ramp.create(kid, {
+            'one': {'two': 'three'},
+            'four': 'five'
+            })
+        #self.assertIn('idx_one', fix)
+        # TODO check fixture contains idx_one
+
+    def test_set_index_path(self) -> None:
+        kid = f"{TEST_PREFIX}-set-index-path"
+        index = incline.InclineDatastore.InclineIndex(name='two',
+                                                      path='one.two')
+        self.ramp.set_index(index)
+        self.assertIn('two', self.ramp.indexes)
+        resp = self.ramp.create(kid, {
+            'one': {'two': 'three'},
+            'four': 'five'
+            })
+        #self.assertIn('idx_two', fix)
+        # TODO check fixture contains idx_two
+
+    def test_set_index_value(self) -> None:
+        kid = f"{TEST_PREFIX}-set-index-value"
+        index = incline.InclineDatastore.InclineIndex(name='six',
+                                                      value='seven')
+        self.ramp.set_index(index)
+        self.assertIn('six', self.ramp.indexes)
+        resp = self.ramp.create(kid, {
+            'one': {'two': 'three'},
+            'four': 'five'
+            })
+        #self.assertIn('idx_six', fix)
+        # TODO check fixture contains idx_six=seven
+
+
     def test_type_string(self) -> None:
         key = f"{TEST_PREFIX}-type-string"
         val = str("hello")

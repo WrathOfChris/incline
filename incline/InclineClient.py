@@ -7,6 +7,7 @@ from typing import Any
 from incline.base62 import base_encode
 from incline.InclineDatastore import incline_resolve
 from incline.InclineDatastoreDynamo import InclineDatastoreDynamo
+from incline.InclineIndex import InclineIndex
 from incline.InclineMeta import InclineMeta, InclineMetaWrite
 from incline.InclinePrepare import InclinePrepare, InclinePxn
 from incline.InclineRecord import InclineRecord
@@ -37,6 +38,7 @@ class InclineClient(object):
         self.__rid = rid
         self.rtr = InclineRouterOne(name=self.name, region=self.region)
         self.cons: list[InclineDatastoreDynamo] = list()
+        self.indexes: dict[str, InclineIndex] = {}
 
         # Tracing
         self.trace = trace
@@ -309,6 +311,19 @@ class InclineClient(object):
                 print('B: {0}'.format(v2))
         return val
 
+    def set_index(self, index: InclineIndex) -> None:
+        """
+        Promote a nested dat.x.y.z path to the top level to enable Global
+        Secondary Indexes.  Prefix with idx_
+        """
+        if not index.name:
+            raise InclineInterface("invalid index with no name")
+        self.indexes[index.name] = index
+
+        for c in self.cons:
+            if index.name not in c.indexes:
+                c.set_index(index)
+
     def ds_find(self, location: str) -> InclineDatastoreDynamo | None:
         for c in self.cons:
             if self.ds_equal(c, location):
@@ -337,6 +352,9 @@ class InclineClient(object):
             con.pxn.cid(self.prepare.cid())
         else:
             raise InclineInterface('unknown datastore in location string')
+
+        for name, index in self.indexes.items():
+            con.set_index(index)
 
         self.cons.append(con)
         return con

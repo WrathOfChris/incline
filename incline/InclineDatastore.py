@@ -2,16 +2,21 @@ from incline.error import (InclineError, InclineExists, InclineDataError,
                            InclineNotFound, InclineInterface)
 from incline.base62 import base_encode
 from incline.flatten import flatten
+from incline.InclineIndex import InclineIndex
 from incline.InclineMeta import InclineMeta, InclineMetaWrite
 from incline.InclinePrepare import InclinePrepare, InclinePxn
 from incline.InclineRecord import InclineRecord
 from incline.InclineTrace import InclineTrace
 import copy
 from decimal import Decimal
+from functools import reduce
 import logging
+import operator
 import sys
 from typing import Any
 from opentelemetry.trace.span import Span
+
+INCLINE_DATASTORE_INDEX_SEPARATOR = '.'
 
 
 def incline_resolve(location: str, delimiter: str = '|') -> dict[str, str]:
@@ -41,6 +46,7 @@ class InclineDatastore(object):
         self.name = name
         self.dbtype = dbtype
         self.delimiter = '|'
+        self.indexes: dict[str, InclineIndex] = {}
         self.version = 1
         self.pxn = InclinePrepare()
         self.__uid = ""
@@ -61,6 +67,9 @@ class InclineDatastore(object):
             handler.setFormatter(formatter)
             self.log.addHandler(handler)
             self.log.propagate = False
+
+        # Indexes
+
 
     def __log_configured(self) -> bool:
         for h in self.log.handlers:
@@ -117,7 +126,7 @@ class InclineDatastore(object):
 
     def prepare_val(self, kid: str, pxn: InclinePxn, met: InclineMeta,
                     dat: dict[str, Any]) -> dict[str, Any]:
-        return {
+        val = {
             'kid': kid,
             'pxn': pxn.pxn,
             'tsv': self.pxn.now(),
@@ -128,6 +137,8 @@ class InclineDatastore(object):
             'met': self.canon_metadata(met).to_dict(),
             'dat': dat
         }
+        val = self.add_indexes(val)
+        return val
 
     def prepare(self, kid: str, pxn: InclinePxn, met: InclineMeta,
                 dat: dict[str, Any]) -> list[InclineRecord]:
@@ -155,6 +166,35 @@ class InclineDatastore(object):
         with self.trace.span("incline.setup") as span:
             return self.ds_setup()
 
+    def set_index(self, index: InclineIndex) -> None:
+        """
+        Promote a nested dat.x.y.z path to the top level to enable Global
+        Secondary Indexes.  Prefix with idx_
+        """
+        if not index.name:
+            raise InclineInterface("invalid index with no name")
+        self.indexes[index.name] = index
+
+    def add_indexes(self, val: dict[str, Any]) -> dict[str, Any]:
+        for name, index in self.indexes.items():
+            if not index.name:
+                raise InclineInterface("invalid index with no name")
+            index_name = f"idx_{index.name}"
+
+            if index.value:
+                val[index_name] = index.value
+            if index.path:
+                val[index_name] = self.get_index(index.path, val['dat'])
+        return val
+
+    def get_index(self, path: str, val: dict[str, Any]) -> Any:
+        paths = path.split(INCLINE_DATASTORE_INDEX_SEPARATOR)
+        try:
+            return reduce(operator.getitem, paths, val)
+        except (KeyError, IndexError, TypeError):
+            pass
+        return None
+
     def genlog(self, kid: str, pxn: InclinePxn, met: InclineMeta,
                dat: dict[str, Any]) -> dict[str, Any]:
         log = {
@@ -168,6 +208,7 @@ class InclineDatastore(object):
             'met': self.canon_metadata(met).to_dict(),
             'dat': dat
         }
+        log = self.add_indexes(log)
         return log
 
     def gentxn(
@@ -191,7 +232,7 @@ class InclineDatastore(object):
             'met': log['met'],
             'dat': log['dat']
         }
-
+        txn = self.add_indexes(txn)
         return txn
 
     """
