@@ -259,6 +259,28 @@ class InclineClient(object):
             resp.data[c.kid] = c
         return resp
 
+    def refresh(self, key: str) -> InclineResponse:
+        """
+        InclineResponse includes a list of all InclineRecord commits to all
+        datastores
+        """
+        # TODO: check number ranges and data types (ex: dynamo decimal)
+        txn = self.getkey(key)
+
+        self.log.info('refresh %s %s', txn.kid, format(txn.pxn))
+        datastores = self.rtr.lookup('write', txn.kid)
+
+        commits = []
+        for ds in datastores:
+            con = self.ds_open(ds)
+            commit = con.commit(txn.kid, txn.pxn, mode="refresh")
+            commits += commit
+
+        resp = InclineResponse(pxn=txn.pxn)
+        for c in commits:
+            resp.data[c.kid] = c
+        return resp
+
     def genmet(self,
                datastores: list[str],
                datastore: str,

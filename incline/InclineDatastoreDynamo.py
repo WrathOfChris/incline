@@ -192,7 +192,12 @@ class InclineDatastoreDynamo(InclineDatastore):
             orgtsv = 0
             org = self.only(self.ds_get_txn(kid))
             if org and 'tsv' in org:
-                orgtsv = org['tsv']
+                if mode == "refresh":
+                    # Refresh persists the origin timestamp
+                    orgtsv = org['org']
+                else:
+                    # Set origin to latest transaction timestamp
+                    orgtsv = org['tsv']
             if org:
                 self.map_txn_span(org, span, prefix="org")
 
@@ -222,10 +227,14 @@ class InclineDatastoreDynamo(InclineDatastore):
                     if not self.is_txn_deleted(org):
                         raise InclineExists('key exists, create after prepare')
 
-            if mode == 'delete':
-                log['dat'] = None
+            # convert numbers to remote representation
+            # DynamoDB uses Decimal, does not support float
+            remote_log = self.numbers_to_remote(copy.deepcopy(log))
 
-            val = self.gentxn(log, tsv=orgtsv)
+            if mode == 'delete':
+                remote_log['dat'] = None
+
+            val = self.gentxn(remote_log, tsv=orgtsv)
             self.map_txn_span(val, span, prefix="txn")
             with self.trace.span("aws.dynamodb.put_item") as span_put:
                 try:

@@ -160,7 +160,7 @@ class TestInclineClient(unittest.TestCase):
                          self.ramp.get(f"{TEST_PREFIX}-putget").only.data)
 
     def test_set_index(self) -> None:
-        kid = f"{TEST_PREFIX}-set-index"
+        kid = f"{TEST_PREFIX}-set-index-{self.tsv}"
         index = incline.InclineDatastore.InclineIndex(name='one',
                                                       path='one')
         self.ramp.set_index(index)
@@ -169,11 +169,12 @@ class TestInclineClient(unittest.TestCase):
             'one': {'two': 'three'},
             'four': 'five'
             })
-        #self.assertIn('idx_one', fix)
-        # TODO check fixture contains idx_one
+        rec = resp.only
+        self.assertIn('one', rec.idx)
+        self.assertEqual({'two': 'three'}, rec.idx['one'].value)
 
     def test_set_index_path(self) -> None:
-        kid = f"{TEST_PREFIX}-set-index-path"
+        kid = f"{TEST_PREFIX}-set-index-path-{self.tsv}"
         index = incline.InclineDatastore.InclineIndex(name='two',
                                                       path='one.two')
         self.ramp.set_index(index)
@@ -182,11 +183,12 @@ class TestInclineClient(unittest.TestCase):
             'one': {'two': 'three'},
             'four': 'five'
             })
-        #self.assertIn('idx_two', fix)
-        # TODO check fixture contains idx_two
+        rec = resp.only
+        self.assertIn('two', rec.idx)
+        self.assertEqual('three', rec.idx['two'].value)
 
     def test_set_index_value(self) -> None:
-        kid = f"{TEST_PREFIX}-set-index-value"
+        kid = f"{TEST_PREFIX}-set-index-value-{self.tsv}"
         index = incline.InclineDatastore.InclineIndex(name='six',
                                                       value='seven')
         self.ramp.set_index(index)
@@ -195,9 +197,64 @@ class TestInclineClient(unittest.TestCase):
             'one': {'two': 'three'},
             'four': 'five'
             })
-        #self.assertIn('idx_six', fix)
-        # TODO check fixture contains idx_six=seven
+        rec = resp.only
+        self.assertIn('six', rec.idx)
+        self.assertEqual('seven', rec.idx['six'].value)
 
+
+    def test_set_index_value_float(self) -> None:
+        kid = f"{TEST_PREFIX}-set-index-value-float-{self.tsv}"
+        index = incline.InclineDatastore.InclineIndex(name='eight',
+                                                      value=0.12345)
+        self.ramp.set_index(index)
+        resp = self.ramp.create(kid, {
+            'one': {'two': 'three'},
+            'four': 'five'
+            })
+        rec = resp.only
+        self.assertIn('eight', rec.idx)
+        self.assertEqual(Decimal('0.12345'), rec.idx['eight'].value)
+
+    def test_set_index_path_float(self) -> None:
+        kid = f"{TEST_PREFIX}-set-index-path-float-{self.tsv}"
+        index = incline.InclineDatastore.InclineIndex(name='ten',
+                                                      path='nine.ten')
+        self.ramp.set_index(index)
+        self.assertIn('two', self.ramp.indexes)
+        resp = self.ramp.create(kid, {
+            'one': {'two': 'three'},
+            'four': 'five',
+            'nine': {'ten': 11.424242}
+            })
+        rec = resp.only
+        self.assertIn('ten', rec.idx)
+        self.assertEqual(Decimal('11.424242'), rec.idx['ten'].value)
+
+    def test_set_index_value_refresh(self) -> None:
+        kid1 = f"{TEST_PREFIX}-set-index-value-refresh-1-{self.tsv}"
+        kid2 = f"{TEST_PREFIX}-set-index-value-refresh-2-{self.tsv}"
+        # reset indexes
+        self.ramp.indexes = {}
+        # create without index
+        create_resp = self.ramp.creates([
+            {'kid': kid1,
+             'dat': {
+                 'one': {'two': 'three'},
+                 'four': 'five'
+                 },
+             },
+            {'kid': kid2,
+             'dat': {
+                 'one': {'two': 'three'},
+                 'four': 'five'
+                 },
+             }])
+        # add index
+        index = incline.InclineDatastore.InclineIndex(name='twelve12',
+                                                      value='thirteen')
+        self.ramp.set_index(index)
+        refresh_resp = self.ramp.refresh(kid2)
+        self.assertEqual(create_resp.data[kid2].to_dict(), refresh_resp.only.to_dict())
 
     def test_type_string(self) -> None:
         key = f"{TEST_PREFIX}-type-string"
@@ -227,6 +284,16 @@ class TestInclineClient(unittest.TestCase):
         resp = self.ramp.put(key, val)
         self.assertIsNotNone(resp)
         self.assertEqual(val, self.ramp.get(key).only.data)
+
+    def test_type_dict_float(self) -> None:
+        key = f"{TEST_PREFIX}-type-dict-float"
+        val = {
+                'float': 42.424242
+                }
+        resp = self.ramp.put(key, val)
+        self.assertIsNotNone(resp)
+        self.assertEqual({'float': Decimal('42.424242')},
+                          self.ramp.get(key).only.data)
 
     def test_type_list(self) -> None:
         key = f"{TEST_PREFIX}-type-list"

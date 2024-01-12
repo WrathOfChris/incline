@@ -182,9 +182,10 @@ class InclineDatastore(object):
             index_name = f"idx_{index.name}"
 
             if index.value:
-                val[index_name] = index.value
+                val[index_name] = self.numbers_to_remote(index.value)
             if index.path:
-                val[index_name] = self.get_index(index.path, val['dat'])
+                val[index_name] = self.numbers_to_remote(
+                        self.get_index(index.path, val['dat']))
         return val
 
     def get_index(self, path: str, val: dict[str, Any]) -> Any:

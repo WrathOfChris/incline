@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field, InitVar
 from decimal import Decimal
 from typing import Any
+from incline.InclineIndex import InclineIndex
 from incline.InclineMeta import InclineMeta
 from incline.InclinePrepare import InclinePxn
 
@@ -27,6 +28,7 @@ class InclineRecord:
                              repr=False,
                              compare=False)
     dat: Any = field(init=False, repr=False, compare=False)
+    idx: dict[str, InclineIndex] = field(default_factory=dict)
     record: InitVar[dict[str, Any] | None] = None
 
     def __post_init__(self, record: dict[str, Any] | None) -> None:
@@ -99,6 +101,11 @@ class InclineRecord:
         self.dat = None
         if val.get('dat'):
             self.dat = val['dat']
+
+        for k, v in val.items():
+            if k.startswith('idx_'):
+                _, _, index_name = k.partition('_')
+                self.idx[index_name] = InclineIndex(name=index_name, value=v)
 
         return self
 
