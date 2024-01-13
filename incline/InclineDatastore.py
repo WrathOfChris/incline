@@ -162,6 +162,27 @@ class InclineDatastore(object):
                           log['tsv'])
             return self.data_to_records(self.ds_commit(kid, log, mode=mode))
 
+    def refresh(self,
+                kid: str,
+                tsv: Decimal | None = None,
+                pxn: InclinePxn | None = None) -> list[InclineRecord]:
+        request_args = locals()
+        with self.trace.span("incline.refresh") as span:
+            self.map_request_span(request_args, span)
+
+            # get txn or log record
+            record = self.only(self.get(kid=kid, tsv=tsv, pxn=pxn))
+
+            # convert record to log format
+            # TODO record->log
+            log = record.to_dict()
+
+            self.log.info('refresh %s pxn %s org %s', kid, format(pxn),
+                          log['tsv'])
+            return self.data_to_records(self.ds_commit(kid,
+                                                       log,
+                                                       mode="refresh"))
+
     def setup(self) -> None:
         with self.trace.span("incline.setup") as span:
             return self.ds_setup()

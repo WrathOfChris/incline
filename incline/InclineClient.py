@@ -273,7 +273,20 @@ class InclineClient(object):
         commits = []
         for ds in datastores:
             con = self.ds_open(ds)
-            commit = con.commit(txn.kid, txn.pxn, mode="refresh")
+
+            commit = None
+
+            # refresh from log if present
+            try:
+                commit = con.refresh(kid=txn.kid, pxn=txn.pxn)
+            except InclineNotFound as e:
+                self.log.info(f"refresh {txn.kid} pxn {format(txn.pxn)} " \
+                        f"log not found, refresh from tsv {txn.tsv}")
+                pass
+
+            # refresh from txn if log gone
+            if not commit:
+                commit = con.refresh(kid=txn.kid, tsv=txn.tsv)
             commits += commit
 
         resp = InclineResponse(pxn=txn.pxn)
