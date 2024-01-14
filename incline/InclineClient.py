@@ -294,6 +294,20 @@ class InclineClient(object):
             resp.data[c.kid] = c
         return resp
 
+    def index(self, idx: str, val: Any) -> list[dict[str, Any]]:
+        datastores = self.rtr.lookup('index', idx)
+        self.log.info('index %s %s [%s]', idx, val, ','.join(datastores))
+        vals: list[dict[str, Any]] = []
+        for ds in datastores:
+            con = self.ds_open(ds)
+            items = con.ds_get_idx(idx, val)
+            for i in items:
+                vals.append(i)
+        if not vals:
+            raise InclineNotFound('idx val not found in any datastore index')
+
+        return vals
+
     def genmet(self,
                datastores: list[str],
                datastore: str,

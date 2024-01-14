@@ -25,6 +25,9 @@ class InclineRouter(object):
             return self.write
         elif action == "search":
             return self.search
+        elif action == "index":
+            # TODO change to self.index
+            return self.read
         else:
             raise InclineNotFound('router invalid lookup action')
 

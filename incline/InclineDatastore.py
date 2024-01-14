@@ -584,5 +584,8 @@ class InclineDatastore(object):
     def ds_delete_txn(self, kid: str, tsv: Decimal) -> None:
         pass
 
+    def ds_get_idx(self, idx: str, val: Any) -> list[dict[str, Any]]:
+        return []
+
     def ds_setup(self) -> None:
         pass

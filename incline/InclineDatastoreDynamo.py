@@ -427,6 +427,37 @@ class InclineDatastoreDynamo(InclineDatastore):
                         or resp['Attributes'].get('tsv') != tsv):
                     raise InclineNotFound(f"cannot delete {kid} tsv {tsv}")
 
+    def ds_get_idx(self,
+                   idx: str,
+                   val: Any) -> list[dict[str, Any]]:
+        """
+        get from index
+        """
+        request_args = locals()
+        with self.trace.span("incline.datastore.ds_get_idx") as span:
+            self.map_request_span(request_args, span)
+
+            if not isinstance(idx, str):
+                raise InclineInterface(f"idx must be string not {type(idx)}")
+
+            kwargs: dict[str, Any] = {}
+            self.log.info('getidx %s val %s', idx, val)
+            kwargs['KeyConditionExpression'] = Key(f"idx_{idx}").eq(val)
+            kwargs['IndexName'] = f"{self.txnname}-idx-{idx}"
+
+            with self.trace.span("aws.dynamodb.query") as span_query:
+                try:
+                    resp = self.txntbl.query(**kwargs)
+                except ClientError as e:
+                    raise InclineDataError(e.response['Error']['Message'])
+                self.map_aws_response_span(resp, span_query)
+
+            # XXX validate resp?  Count.  Items.
+
+            local_resp = self.map_idx_response_dynamo(idx, resp)
+            self.map_response_span(local_resp, span)
+            return local_resp
+
     def map_log_response_dynamo(self, resp: dict[str,
                                                  Any]) -> list[dict[str, Any]]:
         """
@@ -441,6 +472,32 @@ class InclineDatastoreDynamo(InclineDatastore):
         if 'Items' not in resp:
             raise InclineDataError('map txn invalid items')
         return self.map_txn_response(resp['Items'])
+
+    def map_idx_response_dynamo(self,
+                                idx: str,
+                                resp: dict[str, Any]) -> list[dict[str, Any]]:
+        if 'Items' not in resp:
+            raise InclineDataError('map idx invalid items')
+        items = resp['Items']
+        if not isinstance(items, list):
+            items = [items]
+
+        r = []
+        for item in items:
+            # {'idx_tid': 'T0ZQN0VmTcnwPipn391Vrtr',
+            #  'tsv': Decimal('1701825790.360248'),
+            #  'pxn': '0ryIfPzwQ.21iNZOIOsUS',
+            #  'kid': 'C08XeIPmJXgOzKnskv3D93S'}
+            data = {}
+            for k, v in item.items():
+                if k.startswith('idx_'):
+                    # drop the searched value, it is known
+                    continue
+                else:
+                    data[k] = v
+            r.append(data)
+
+        return r
 
     def map_scan_log_response(self, resp: dict[str,
                                                Any]) -> list[dict[str, Any]]:
