@@ -225,6 +225,9 @@ class InclineClient(object):
         """
         InclineResponse includes a list of all InclineRecord commits to all
         datastores
+
+        TODO consider an 'index' param to add per-write index
+          Ex: add idx_tid when team_id is part of the key, not a data path
         """
         # TODO: check number ranges and data types (ex: dynamo decimal)
         datastores = list()
@@ -372,6 +375,19 @@ class InclineClient(object):
         for c in self.cons:
             if index.name not in c.indexes:
                 c.set_index(index)
+
+    def del_index(self, index: InclineIndex) -> None:
+        """
+        Remove an index name from the indexes
+        """
+        if not index.name:
+            raise InclineInterface("invalid index with no name")
+        if index.name in self.indexes:
+            del self.indexes[index.name]
+
+        for c in self.cons:
+            if index.name in c.indexes:
+                c.del_index(index)
 
     def ds_find(self, location: str) -> InclineDatastoreDynamo | None:
         for c in self.cons:

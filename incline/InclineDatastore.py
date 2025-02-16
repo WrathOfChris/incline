@@ -196,7 +196,22 @@ class InclineDatastore(object):
             raise InclineInterface("invalid index with no name")
         self.indexes[index.name] = index
 
+    def del_index(self, index: InclineIndex) -> None:
+        """
+        Remove an index name from the indexes
+        """
+        if not index.name:
+            raise InclineInterface("invalid index with no name")
+        if index.name in self.indexes:
+            del self.indexes[index.name]
+
     def add_indexes(self, val: dict[str, Any]) -> dict[str, Any]:
+        """
+        Add index values to idx_* keys
+
+        NOTE value could be String|Number|Binary and cause ValidationException
+        if incorrect.  For now, avoid the None case as a quick fix.
+        """
         for name, index in self.indexes.items():
             if not index.name:
                 raise InclineInterface("invalid index with no name")
@@ -205,8 +220,9 @@ class InclineDatastore(object):
             if index.value:
                 val[index_name] = self.numbers_to_remote(index.value)
             if index.path:
-                val[index_name] = self.numbers_to_remote(
-                        self.get_index(index.path, val['dat']))
+                value = self.get_index(index.path, val['dat'])
+                if value is not None:
+                    val[index_name] = self.numbers_to_remote(value)
         return val
 
     def get_index(self, path: str, val: dict[str, Any]) -> Any:
